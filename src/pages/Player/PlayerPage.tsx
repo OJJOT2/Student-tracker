@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { VideoPlayer } from '../../components/VideoPlayer/VideoPlayer'
 import { usePlayerStore } from '../../stores/playerStore'
 import { useSessionStore } from '../../stores/sessionStore'
+import type { TimestampMark } from '../../types/session'
 import './PlayerPage.css'
 
 export function PlayerPage() {
@@ -11,9 +12,13 @@ export function PlayerPage() {
         currentSession,
         currentVideoIndex,
         currentVideoFile,
+        marks,
         setCurrentVideo,
         playNext,
-        closePlayer
+        closePlayer,
+        addMark,
+        updateMark,
+        deleteMark
     } = usePlayerStore()
     const { updateSessionMetadata } = useSessionStore()
 
@@ -95,6 +100,32 @@ export function PlayerPage() {
         }
     }, [currentSession, updateSessionMetadata])
 
+    // Handle adding a mark
+    const handleAddMark = useCallback((mark: TimestampMark) => {
+        addMark(mark)
+    }, [addMark])
+
+    // Handle updating a mark
+    const handleUpdateMark = useCallback((id: string, updates: Partial<TimestampMark>) => {
+        updateMark(id, updates)
+    }, [updateMark])
+
+    // Handle deleting a mark
+    const handleDeleteMark = useCallback((id: string) => {
+        deleteMark(id)
+    }, [deleteMark])
+
+    // Save marks to session metadata
+    const handleSaveMarks = useCallback(async () => {
+        // Get all marks from the session (updated via playerStore)
+        const { currentSession: session } = usePlayerStore.getState()
+        if (session) {
+            await updateSessionMetadata({
+                marks: session.marks
+            })
+        }
+    }, [updateSessionMetadata])
+
     // Handle close
     const handleClose = () => {
         closePlayer()
@@ -127,6 +158,14 @@ export function PlayerPage() {
                     onTimeUpdate={handleTimeUpdate}
                     onEnded={handleEnded}
                     onProgress={handleProgress}
+                    // Stage 6: Pass marks and notes
+                    marks={marks}
+                    notes={currentSession.notes || ''}
+                    currentVideoFile={currentVideoFile}
+                    onAddMark={handleAddMark}
+                    onUpdateMark={handleUpdateMark}
+                    onDeleteMark={handleDeleteMark}
+                    onSaveMarks={handleSaveMarks}
                 />
             </div>
 
@@ -157,6 +196,19 @@ export function PlayerPage() {
                             </button>
                         )
                     })}
+                </div>
+
+                {/* Keyboard Shortcuts Help */}
+                <div className="shortcuts-help">
+                    <h4>⌨️ Shortcuts</h4>
+                    <div className="shortcuts-grid">
+                        <span><kbd>Space</kbd> Play/Pause</span>
+                        <span><kbd>M</kbd> Add Mark</span>
+                        <span><kbd>N</kbd> Toggle Notes</span>
+                        <span><kbd>WASD</kbd> Pan Video</span>
+                        <span><kbd>Q/E</kbd> Zoom In/Out</span>
+                        <span><kbd>R</kbd> Reset View</span>
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Stage 2 design document covering:\n- Recursive depth-first folder traversal algorithm\n- Session detection decision tree (MP4 presence = session)\n- Complete session.meta.json schema with UUID, videos progress, marks, and timestamps\n- UUID v4 ID strategy with assignment rules\n- Metadata lifecycle diagram\n- Progress calculation logic (completed parts / total parts)\n- Video completion threshold (90%)\n- TypeScript type definitions for FolderNode, Session, VideoItem",
+  "updatedAt": "2026-01-27T17:01:21.822990600Z"
+}

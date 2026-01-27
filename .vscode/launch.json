@@ -1,0 +1,53 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Electron: Dev",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run",
+                "dev"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
+        {
+            "name": "Electron: Main Process",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+            "windows": {
+                "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
+            },
+            "args": [
+                ".",
+                "--remote-debugging-port=9222"
+            ],
+            "outputCapture": "std",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Electron: Renderer (Chrome)",
+            "type": "chrome",
+            "request": "attach",
+            "port": 9222,
+            "webRoot": "${workspaceFolder}/src",
+            "timeout": 30000
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Electron: Full Debug",
+            "configurations": [
+                "Electron: Main Process",
+                "Electron: Renderer (Chrome)"
+            ]
+        }
+    ]
+}

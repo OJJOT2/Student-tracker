@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_IMPLEMENTATION_PLAN",
+  "summary": "Stage 3 UI design for Sessions tab including:\n- Sessions page layout with sidebar tree and main panel\n- FolderTree component with expand/collapse, icons, and progress badges\n- SessionCard component showing status, progress bar, tags, and metadata\n- Session selection behavior with keyboard navigation\n- Component hierarchy and state flow\n- Interaction patterns for navigation and session management",
+  "updatedAt": "2026-01-27T17:04:46.489647800Z"
+}
