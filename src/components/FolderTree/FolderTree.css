@@ -1,0 +1,128 @@
+.folder-tree {
+    font-size: 14px;
+}
+
+.empty-tree-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.empty-tree-message .hint {
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+.tree-node {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.tree-node:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Category node */
+.category-node {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.category-node:hover {
+    color: var(--text-primary);
+}
+
+.expand-icon {
+    font-size: 10px;
+    transition: transform 0.2s ease;
+    opacity: 0.6;
+}
+
+.expand-icon.expanded {
+    transform: rotate(90deg);
+}
+
+.folder-icon {
+    font-size: 16px;
+}
+
+.child-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.category-children {
+    margin-left: 0;
+}
+
+/* Session node */
+.session-node {
+    color: var(--text-secondary);
+}
+
+.session-node:hover {
+    color: var(--text-primary);
+}
+
+.session-node.selected {
+    background: rgba(102, 126, 234, 0.2);
+    color: var(--text-primary);
+}
+
+.session-node.completed {
+    color: var(--success);
+}
+
+/* Status icons */
+.status-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.status-icon.untouched {
+    color: var(--text-muted);
+}
+
+.status-icon.started {
+    color: var(--warning);
+}
+
+.status-icon.completed {
+    color: var(--success);
+}
+
+/* Progress badge */
+.progress-badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-primary);
+    background: rgba(102, 126, 234, 0.2);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.node-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

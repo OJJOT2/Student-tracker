@@ -1,0 +1,227 @@
+.session-card {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Header */
+.card-header {
+    margin-bottom: 24px;
+}
+
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.card-title h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.card-path {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-family: monospace;
+}
+
+/* Progress */
+.card-progress {
+    background: var(--bg-card);
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.progress-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.progress-value {
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.card-progress .progress-bar {
+    height: 12px;
+    margin-bottom: 12px;
+}
+
+.progress-stats {
+    display: flex;
+    gap: 24px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* Tags */
+.card-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+/* Description */
+.card-description {
+    background: var(--bg-card);
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+}
+
+.card-description h3 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.card-description p {
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+/* Playlist */
+.card-playlist {
+    background: var(--bg-card);
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+}
+
+.card-playlist h3 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.playlist-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.playlist-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+}
+
+.playlist-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.playlist-item.completed {
+    opacity: 0.7;
+}
+
+.item-index {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.playlist-item.completed .item-index {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+}
+
+.item-name {
+    flex: 1;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.item-resume {
+    font-size: 12px;
+    color: var(--accent-primary);
+    background: rgba(102, 126, 234, 0.2);
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.item-play {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--accent-gradient);
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.playlist-item:hover .item-play {
+    opacity: 1;
+}
+
+.item-play:hover {
+    transform: scale(1.1);
+}
+
+/* Attachments */
+.card-attachments {
+    background: var(--bg-card);
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 24px;
+}
+
+.card-attachments h3 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.attachment-list {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.attachment-item {
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.attachment-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-primary);
+}
+
+/* Actions */
+.card-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.card-actions .btn {
+    flex: 1;
+}

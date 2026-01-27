@@ -1,0 +1,75 @@
+import { contextBridge, ipcRenderer } from 'electron'
+
+// Types exposed to renderer
+export interface SessionMetadata {
+    id: string
+    originalPath: string
+    customName: string | null
+    description: string
+    notes: string
+    tags: string[]
+    status: 'untouched' | 'started' | 'completed'
+    videos: Record<string, {
+        watchTime: number
+        lastPosition: number
+        completed: boolean
+        playCount: number
+    }>
+    marks: Array<{
+        id: string
+        videoFile: string
+        timestamp: number
+        label: string
+        color: string
+        createdAt: string
+    }>
+    totalWatchTime: number
+    sessionsCount: number
+    createdAt: string
+    lastAccessedAt: string
+    completedAt: string | null
+}
+
+export interface FolderNode {
+    type: 'session' | 'category'
+    path: string
+    name: string
+    children?: FolderNode[]
+    session?: {
+        id: string
+        videos: string[]
+        pdfs: string[]
+        status: 'untouched' | 'started' | 'completed'
+        progress: number
+        totalWatchTime: number
+    }
+}
+
+const api = {
+    // Directory operations
+    selectDirectory: (): Promise<string | null> =>
+        ipcRenderer.invoke('dir:select'),
+
+    scanDirectory: (path: string): Promise<FolderNode> =>
+        ipcRenderer.invoke('dir:scan', path),
+
+    // Session metadata
+    loadSessionMetadata: (sessionPath: string): Promise<SessionMetadata | null> =>
+        ipcRenderer.invoke('session:read', sessionPath),
+
+    saveSessionMetadata: (sessionPath: string, metadata: SessionMetadata): Promise<boolean> =>
+        ipcRenderer.invoke('session:write', sessionPath, metadata),
+
+    // Media
+    getMediaPath: (filePath: string): Promise<string> =>
+        ipcRenderer.invoke('media:path', filePath)
+}
+
+contextBridge.exposeInMainWorld('api', api)
+
+// Type declaration for renderer
+declare global {
+    interface Window {
+        api: typeof api
+    }
+}
