@@ -205,6 +205,8 @@ export function PlayerPage() {
                         <span><kbd>Space</kbd> Play/Pause</span>
                         <span><kbd>M</kbd> Add Mark</span>
                         <span><kbd>N</kbd> Toggle Notes</span>
+                        <span><kbd>C/X</kbd> Speed +/-0.1x</span>
+                        <span><kbd>Z</kbd> Reset Speed</span>
                         <span><kbd>WASD</kbd> Pan Video</span>
                         <span><kbd>Q/E</kbd> Zoom In/Out</span>
                         <span><kbd>R</kbd> Reset View</span>

@@ -208,6 +208,27 @@
     color: #fff;
 }
 
+/* Speed Display Button */
+.speed-display {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #f5a623;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: monospace;
+    cursor: pointer;
+    min-width: 60px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.speed-display:hover {
+    background: rgba(245, 166, 35, 0.2);
+    border-color: #f5a623;
+}
+
 /* Video Title */
 .video-title {
     position: absolute;
@@ -643,4 +664,26 @@
 /* Video element with transform */
 .video-element.transformed {
     transition: transform 0.1s ease-out;
+}
+
+/* ================================================
+   SPEED INDICATOR
+   ================================================ */
+.speed-indicator {
+    position: absolute;
+    top: 60px;
+    left: 16px;
+    background: rgba(0, 0, 0, 0.85);
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 24px;
+    font-family: monospace;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 50;
+}
+
+.speed-indicator.visible {
+    opacity: 1;
 }

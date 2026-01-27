@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type { FolderNode, SessionMetadata, Session } from '../types/session'
 
+const STORAGE_KEY = 'student-tracker-last-folder'
+
 interface SessionStore {
     // State
     rootDirectory: string | null
@@ -11,6 +13,7 @@ interface SessionStore {
     error: string | null
 
     // Actions
+    init: () => Promise<void>
     selectDirectory: () => Promise<void>
     refreshTree: () => Promise<void>
     selectSession: (sessionPath: string) => Promise<void>
@@ -27,6 +30,25 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     isLoading: false,
     error: null,
 
+    // Initialize store and load last folder
+    init: async () => {
+        try {
+            const savedPath = localStorage.getItem(STORAGE_KEY)
+            if (savedPath) {
+                console.log('Restoring last folder:', savedPath)
+                set({ rootDirectory: savedPath, isLoading: true, error: null })
+                const tree = await window.api.scanDirectory(savedPath)
+                console.log('Restored tree:', JSON.stringify(tree, null, 2))
+                set({ folderTree: tree, isLoading: false })
+            }
+        } catch (err) {
+            console.error('Error restoring last folder:', err)
+            // Clear saved path if it failed (folder might have been moved/deleted)
+            localStorage.removeItem(STORAGE_KEY)
+            set({ rootDirectory: null, folderTree: null, isLoading: false })
+        }
+    },
+
     // Select root directory
     selectDirectory: async () => {
         try {
@@ -37,6 +59,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
                 const tree = await window.api.scanDirectory(path)
                 console.log('Scanned tree:', JSON.stringify(tree, null, 2))
                 set({ folderTree: tree, isLoading: false })
+                // Save to localStorage for persistence
+                localStorage.setItem(STORAGE_KEY, path)
             }
         } catch (err) {
             console.error('Error scanning directory:', err)

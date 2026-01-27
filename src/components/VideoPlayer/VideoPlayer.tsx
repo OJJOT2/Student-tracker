@@ -67,6 +67,7 @@ export function VideoPlayer({
     const [showMarkModal, setShowMarkModal] = useState(false)
     const [transform, setTransform] = useState<VideoTransform>({ x: 0, y: 0, scale: 1 })
     const [showTransformIndicator, setShowTransformIndicator] = useState(false)
+    const [showSpeedIndicator, setShowSpeedIndicator] = useState(false)
 
     // Track watch time
     const watchedTimeRef = useRef(0)
@@ -75,6 +76,7 @@ export function VideoPlayer({
     // Hide controls timeout
     const hideControlsTimeout = useRef<number | null>(null)
     const transformIndicatorTimeout = useRef<number | null>(null)
+    const speedIndicatorTimeout = useRef<number | null>(null)
 
     // Format time as MM:SS or HH:MM:SS
     const formatTime = (seconds: number) => {
@@ -148,8 +150,17 @@ export function VideoPlayer({
     // Change playback rate
     const changePlaybackRate = useCallback((rate: number) => {
         if (videoRef.current) {
-            videoRef.current.playbackRate = rate
-            setPlaybackRate(rate)
+            const roundedRate = Math.round(rate * 10) / 10 // Round to 1 decimal
+            videoRef.current.playbackRate = roundedRate
+            setPlaybackRate(roundedRate)
+            // Show speed indicator
+            setShowSpeedIndicator(true)
+            if (speedIndicatorTimeout.current) {
+                clearTimeout(speedIndicatorTimeout.current)
+            }
+            speedIndicatorTimeout.current = window.setTimeout(() => {
+                setShowSpeedIndicator(false)
+            }, 1500)
         }
     }, [])
 
@@ -336,12 +347,25 @@ export function VideoPlayer({
                     e.preventDefault()
                     resetTransform()
                     break
+                // Speed controls
+                case 'c':
+                    e.preventDefault()
+                    changePlaybackRate(Math.min(5, playbackRate + 0.1))
+                    break
+                case 'x':
+                    e.preventDefault()
+                    changePlaybackRate(Math.max(0.25, playbackRate - 0.1))
+                    break
+                case 'z':
+                    e.preventDefault()
+                    changePlaybackRate(1)
+                    break
             }
         }
 
         document.addEventListener('keydown', handleKeyDown)
         return () => document.removeEventListener('keydown', handleKeyDown)
-    }, [togglePlay, skip, toggleMute, toggleFullscreen, handleAddMark, moveFrame, zoomFrame, resetTransform])
+    }, [togglePlay, skip, toggleMute, toggleFullscreen, handleAddMark, moveFrame, zoomFrame, resetTransform, playbackRate, changePlaybackRate])
 
     // Video event handlers
     useEffect(() => {
@@ -449,6 +473,11 @@ export function VideoPlayer({
                 <span>Zoom: <strong>{Math.round(transform.scale * 100)}%</strong></span>
             </div>
 
+            {/* Speed Indicator */}
+            <div className={`speed-indicator ${showSpeedIndicator ? 'visible' : ''}`}>
+                <strong>{playbackRate.toFixed(1)}x</strong>
+            </div>
+
             {/* Notes Overlay */}
             <NotesOverlay
                 notes={notes}
@@ -551,20 +580,23 @@ export function VideoPlayer({
 
                         {/* Playback Speed */}
                         <div className="speed-control">
-                            <select
-                                value={playbackRate}
-                                onChange={e => changePlaybackRate(parseFloat(e.target.value))}
-                                className="speed-select"
+                            <button
+                                className="speed-display"
+                                onClick={() => {
+                                    // Cycle through common speeds on click
+                                    const speeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3]
+                                    const currentIndex = speeds.findIndex(s => Math.abs(s - playbackRate) < 0.05)
+                                    const nextIndex = currentIndex === -1 ? 2 : (currentIndex + 1) % speeds.length
+                                    changePlaybackRate(speeds[nextIndex])
+                                }}
+                                onContextMenu={(e) => {
+                                    e.preventDefault()
+                                    changePlaybackRate(1)
+                                }}
+                                title="Click to cycle speeds, right-click to reset to 1x. Use C/X/Z for fine control."
                             >
-                                <option value="0.25">0.25x</option>
-                                <option value="0.5">0.5x</option>
-                                <option value="0.75">0.75x</option>
-                                <option value="1">1x</option>
-                                <option value="1.25">1.25x</option>
-                                <option value="1.5">1.5x</option>
-                                <option value="1.75">1.75x</option>
-                                <option value="2">2x</option>
-                            </select>
+                                {playbackRate.toFixed(2).replace(/\.?0+$/, '')}x
+                            </button>
                         </div>
 
                         <button className="control-btn" onClick={toggleFullscreen}>
