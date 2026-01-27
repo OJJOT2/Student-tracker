@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import type { Session } from '../../types/session'
+import { useSessionStore } from '../../stores/sessionStore'
+import { EditSessionModal } from '../EditSessionModal/EditSessionModal'
 import './SessionCard.css'
 
 interface SessionCardProps {
@@ -6,6 +9,9 @@ interface SessionCardProps {
 }
 
 export function SessionCard({ session }: SessionCardProps) {
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+    const { updateSessionMetadata, refreshTree } = useSessionStore()
+
     const completedVideos = Object.values(session.videos).filter(v => v.completed).length
     const totalVideos = session.videoFiles.length
 
@@ -14,6 +20,12 @@ export function SessionCard({ session }: SessionCardProps) {
         const m = Math.floor((seconds % 3600) / 60)
         if (h > 0) return `${h}h ${m}m`
         return `${m}m`
+    }
+
+    const handleSaveMetadata = async (updates: Partial<Session>) => {
+        await updateSessionMetadata(updates)
+        // Refresh tree to update name/status in sidebar
+        await refreshTree()
     }
 
     return (
@@ -65,6 +77,14 @@ export function SessionCard({ session }: SessionCardProps) {
                 </div>
             )}
 
+            {/* Notes */}
+            {session.notes && (
+                <div className="card-notes">
+                    <h3>📋 Notes</h3>
+                    <p>{session.notes}</p>
+                </div>
+            )}
+
             {/* Playlist */}
             <div className="card-playlist">
                 <h3>📼 Playlist</h3>
@@ -113,10 +133,22 @@ export function SessionCard({ session }: SessionCardProps) {
                 <button className="btn btn-primary">
                     ▶️ Start Session
                 </button>
-                <button className="btn btn-secondary">
+                <button
+                    className="btn btn-secondary"
+                    onClick={() => setIsEditModalOpen(true)}
+                >
                     📝 Edit Details
                 </button>
             </div>
+
+            {/* Edit Modal */}
+            <EditSessionModal
+                session={session}
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSave={handleSaveMetadata}
+            />
         </div>
     )
 }
+

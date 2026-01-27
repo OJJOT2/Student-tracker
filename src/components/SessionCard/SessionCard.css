@@ -72,22 +72,26 @@
 }
 
 /* Description */
-.card-description {
+.card-description,
+.card-notes {
     background: var(--bg-card);
     padding: 20px;
     border-radius: var(--radius-lg);
     margin-bottom: 20px;
 }
 
-.card-description h3 {
+.card-description h3,
+.card-notes h3 {
     font-size: 14px;
     color: var(--text-secondary);
     margin-bottom: 12px;
 }
 
-.card-description p {
+.card-description p,
+.card-notes p {
     color: var(--text-primary);
     line-height: 1.6;
+    white-space: pre-wrap;
 }
 
 /* Playlist */

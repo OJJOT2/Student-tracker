@@ -60,7 +60,7 @@ interface TreeNodeProps {
 }
 
 function TreeNode({ node, depth, selectedPath, onSelect }: TreeNodeProps) {
-    const [expanded, setExpanded] = useState(depth < 2)
+    const [expanded, setExpanded] = useState(false) // Start collapsed
 
     if (node.type === 'category') {
         return (
