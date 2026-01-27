@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Session } from '../../types/session'
 import { useSessionStore } from '../../stores/sessionStore'
+import { usePlayerStore } from '../../stores/playerStore'
 import { EditSessionModal } from '../EditSessionModal/EditSessionModal'
 import './SessionCard.css'
 
@@ -9,8 +11,10 @@ interface SessionCardProps {
 }
 
 export function SessionCard({ session }: SessionCardProps) {
+    const navigate = useNavigate()
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const { updateSessionMetadata, refreshTree } = useSessionStore()
+    const { setSession } = usePlayerStore()
 
     const completedVideos = Object.values(session.videos).filter(v => v.completed).length
     const totalVideos = session.videoFiles.length
@@ -24,9 +28,25 @@ export function SessionCard({ session }: SessionCardProps) {
 
     const handleSaveMetadata = async (updates: Partial<Session>) => {
         await updateSessionMetadata(updates)
-        // Refresh tree to update name/status in sidebar
         await refreshTree()
     }
+
+    // Start session - find first unwatched video or start from beginning
+    const handleStartSession = () => {
+        const firstUnwatchedIndex = session.videoFiles.findIndex(
+            video => !session.videos[video]?.completed
+        )
+        const startIndex = firstUnwatchedIndex >= 0 ? firstUnwatchedIndex : 0
+        setSession(session, startIndex)
+        navigate('/player')
+    }
+
+    // Play specific video
+    const handlePlayVideo = (index: number) => {
+        setSession(session, index)
+        navigate('/player')
+    }
+
 
     return (
         <div className="session-card">
@@ -107,7 +127,7 @@ export function SessionCard({ session }: SessionCardProps) {
                                         Resume at {formatDuration(progress.lastPosition)}
                                     </span>
                                 )}
-                                <button className="item-play">▶</button>
+                                <button className="item-play" onClick={() => handlePlayVideo(index)}>▶</button>
                             </div>
                         )
                     })}
@@ -130,7 +150,7 @@ export function SessionCard({ session }: SessionCardProps) {
 
             {/* Actions */}
             <div className="card-actions">
-                <button className="btn btn-primary">
+                <button className="btn btn-primary" onClick={handleStartSession}>
                     ▶️ Start Session
                 </button>
                 <button
