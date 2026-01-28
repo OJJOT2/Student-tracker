@@ -1,0 +1,1 @@
+const t=require,e=t("https"),r=e.Agent,o=e.globalAgent,s=e.Server,n=e.createServer,a=e.get,c=e.request,g=e.default||e;export{r as Agent,s as Server,n as createServer,g as default,a as get,o as globalAgent,c as request};

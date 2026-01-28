@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { DrawingTool, EraserMode } from './PDFViewer'
 import './PDFViewer.css'
 
@@ -35,16 +36,16 @@ interface PDFToolbarProps {
 const COLORS = ['#000000', '#ff0000', '#0000ff', '#00aa00', '#ff6600', '#9900ff']
 const HIGHLIGHTER_COLORS = ['#ffff00', '#00ff00', '#00ffff', '#ff00ff', '#ff9900']
 
-const ERASER_MODE_LABELS: Record<EraserMode, string> = {
-    'area': '🔲 Area',
-    'stroke': '🗑️ Stroke',
-    'whiteout': '⬜ White-out'
+const ERASER_MODE_ICONS: Record<EraserMode, string> = {
+    'area': '⬚',
+    'stroke': '⚡',
+    'whiteout': '▢'
 }
 
 const ERASER_MODE_TOOLTIPS: Record<EraserMode, string> = {
-    'area': 'Erase only the pixels touched (1)',
-    'stroke': 'Delete entire strokes touched (2)',
-    'whiteout': 'Draw white over strokes (3)'
+    'area': 'Erase pixels touched (1)',
+    'stroke': 'Delete entire strokes (2)',
+    'whiteout': 'Draw white over (3)'
 }
 
 export function PDFToolbar({
@@ -77,20 +78,46 @@ export function PDFToolbar({
     onRedo,
     onSave
 }: PDFToolbarProps) {
+    const [showToolOptions, setShowToolOptions] = useState(false)
+
+    const getCurrentSize = () => {
+        switch (currentTool) {
+            case 'pen': return penSize
+            case 'highlighter': return highlighterSize
+            case 'eraser': return eraserSize
+            default: return 0
+        }
+    }
+
+    const handleSizeChange = (size: number) => {
+        switch (currentTool) {
+            case 'pen': onPenSizeChange(size); break
+            case 'highlighter': onHighlighterSizeChange(size); break
+            case 'eraser': onEraserSizeChange(size); break
+        }
+    }
+
+    const getSizeRange = () => {
+        switch (currentTool) {
+            case 'pen': return { min: 1, max: 10 }
+            case 'highlighter': return { min: 10, max: 40 }
+            case 'eraser': return { min: 5, max: 50 }
+            default: return { min: 1, max: 10 }
+        }
+    }
+
     return (
-        <div className="pdf-toolbar">
-            {/* Navigation */}
+        <div className="pdf-toolbar compact">
+            {/* Navigation - compact */}
             <div className="toolbar-group">
                 <button
-                    className="toolbar-btn"
+                    className="toolbar-btn-sm"
                     onClick={onPrevPage}
                     disabled={currentPage <= 1}
-                    title="Previous page (←)"
-                >
-                    ◀
-                </button>
+                    title="Previous (←)"
+                >◀</button>
 
-                <div className="page-input-group">
+                <div className="page-input-compact">
                     <input
                         type="number"
                         className="page-input"
@@ -104,206 +131,157 @@ export function PDFToolbar({
                 </div>
 
                 <button
-                    className="toolbar-btn"
+                    className="toolbar-btn-sm"
                     onClick={onNextPage}
                     disabled={currentPage >= numPages}
-                    title="Next page (→)"
-                >
-                    ▶
-                </button>
+                    title="Next (→)"
+                >▶</button>
             </div>
 
-            <div className="toolbar-separator" />
+            <div className="toolbar-separator-sm" />
 
-            {/* Zoom */}
+            {/* Zoom - compact */}
             <div className="toolbar-group">
+                <button className="toolbar-btn-sm" onClick={onZoomOut} title="Zoom out">−</button>
                 <button
-                    className="toolbar-btn"
-                    onClick={onZoomOut}
-                    title="Zoom out (Ctrl+- or Ctrl+Wheel)"
-                >
-                    −
-                </button>
-                <button
-                    className="toolbar-btn zoom-indicator"
+                    className="toolbar-btn-sm zoom-compact"
                     onClick={onResetZoom}
-                    title="Reset zoom (Ctrl+0)"
+                    title="Reset zoom"
                 >
                     {Math.round(scale * 100)}%
                 </button>
-                <button
-                    className="toolbar-btn"
-                    onClick={onZoomIn}
-                    title="Zoom in (Ctrl++ or Ctrl+Wheel)"
-                >
-                    +
-                </button>
+                <button className="toolbar-btn-sm" onClick={onZoomIn} title="Zoom in">+</button>
             </div>
 
-            <div className="toolbar-separator" />
+            <div className="toolbar-separator-sm" />
 
-            {/* Tools */}
-            <div className="toolbar-group">
+            {/* Drawing Tools - grouped with dropdown */}
+            <div
+                className="toolbar-group tool-dropdown-container"
+                onMouseEnter={() => setShowToolOptions(true)}
+                onMouseLeave={() => setShowToolOptions(false)}
+            >
+                {/* Main tool buttons */}
                 <button
-                    className={`toolbar-btn ${currentTool === 'select' ? 'active' : ''}`}
+                    className={`toolbar-btn-sm ${currentTool === 'select' ? 'active' : ''}`}
                     onClick={() => onToolChange('select')}
                     title="Select (V)"
-                >
-                    👆
-                </button>
+                >👆</button>
                 <button
-                    className={`toolbar-btn ${currentTool === 'pen' ? 'active' : ''}`}
+                    className={`toolbar-btn-sm ${currentTool === 'pen' ? 'active' : ''}`}
                     onClick={() => onToolChange('pen')}
                     title="Pen (P)"
-                >
-                    ✏️
-                </button>
+                >✏️</button>
                 <button
-                    className={`toolbar-btn ${currentTool === 'highlighter' ? 'active' : ''}`}
+                    className={`toolbar-btn-sm ${currentTool === 'highlighter' ? 'active' : ''}`}
                     onClick={() => onToolChange('highlighter')}
                     title="Highlighter (H)"
-                >
-                    🖍️
-                </button>
+                >🖍️</button>
                 <button
-                    className={`toolbar-btn ${currentTool === 'eraser' ? 'active' : ''}`}
+                    className={`toolbar-btn-sm ${currentTool === 'eraser' ? 'active' : ''}`}
                     onClick={() => onToolChange('eraser')}
                     title="Eraser (E)"
-                >
-                    🧹
-                </button>
+                >🧹</button>
+
+                {/* Tool options dropdown */}
+                {showToolOptions && currentTool !== 'select' && (
+                    <div className="tool-options-dropdown">
+                        {/* Pen options */}
+                        {currentTool === 'pen' && (
+                            <div className="dropdown-section">
+                                <div className="dropdown-row">
+                                    {COLORS.map(color => (
+                                        <button
+                                            key={color}
+                                            className={`color-dot ${penColor === color ? 'active' : ''}`}
+                                            style={{ backgroundColor: color }}
+                                            onClick={() => onPenColorChange(color)}
+                                        />
+                                    ))}
+                                    <input
+                                        type="color"
+                                        value={penColor}
+                                        onChange={e => onPenColorChange(e.target.value)}
+                                        className="color-input-sm"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Highlighter options */}
+                        {currentTool === 'highlighter' && (
+                            <div className="dropdown-section">
+                                <div className="dropdown-row">
+                                    {HIGHLIGHTER_COLORS.map(color => (
+                                        <button
+                                            key={color}
+                                            className={`color-dot ${highlighterColor === color ? 'active' : ''}`}
+                                            style={{ backgroundColor: color }}
+                                            onClick={() => onHighlighterColorChange(color)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Eraser mode options */}
+                        {currentTool === 'eraser' && (
+                            <div className="dropdown-section">
+                                <div className="dropdown-row eraser-modes">
+                                    {(['area', 'stroke', 'whiteout'] as EraserMode[]).map(mode => (
+                                        <button
+                                            key={mode}
+                                            className={`eraser-mode-sm ${eraserMode === mode ? 'active' : ''}`}
+                                            onClick={() => onEraserModeChange(mode)}
+                                            title={ERASER_MODE_TOOLTIPS[mode]}
+                                        >
+                                            {ERASER_MODE_ICONS[mode]}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Size slider for all drawing tools */}
+                        <div className="dropdown-section">
+                            <div className="dropdown-row size-row">
+                                <span className="size-label">Size:</span>
+                                <input
+                                    type="range"
+                                    min={getSizeRange().min}
+                                    max={getSizeRange().max}
+                                    value={getCurrentSize()}
+                                    onChange={e => handleSizeChange(parseInt(e.target.value))}
+                                    className="size-slider-sm"
+                                />
+                                <span className="size-value-sm">{getCurrentSize()}px</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
-
-            {/* Pen Options */}
-            {currentTool === 'pen' && (
-                <>
-                    <div className="toolbar-separator" />
-                    <div className="toolbar-group">
-                        <span className="toolbar-label">Color:</span>
-                        <div className="color-picker">
-                            {COLORS.map(color => (
-                                <button
-                                    key={color}
-                                    className={`color-btn ${penColor === color ? 'active' : ''}`}
-                                    style={{ backgroundColor: color }}
-                                    onClick={() => onPenColorChange(color)}
-                                />
-                            ))}
-                            <input
-                                type="color"
-                                value={penColor}
-                                onChange={e => onPenColorChange(e.target.value)}
-                                className="color-input"
-                            />
-                        </div>
-                        <span className="toolbar-label">Size:</span>
-                        <input
-                            type="range"
-                            min="1"
-                            max="10"
-                            value={penSize}
-                            onChange={e => onPenSizeChange(parseInt(e.target.value))}
-                            className="size-slider"
-                        />
-                        <span className="size-value">{penSize}px</span>
-                    </div>
-                </>
-            )}
-
-            {/* Highlighter Options */}
-            {currentTool === 'highlighter' && (
-                <>
-                    <div className="toolbar-separator" />
-                    <div className="toolbar-group">
-                        <span className="toolbar-label">Color:</span>
-                        <div className="color-picker">
-                            {HIGHLIGHTER_COLORS.map(color => (
-                                <button
-                                    key={color}
-                                    className={`color-btn ${highlighterColor === color ? 'active' : ''}`}
-                                    style={{ backgroundColor: color }}
-                                    onClick={() => onHighlighterColorChange(color)}
-                                />
-                            ))}
-                        </div>
-                        <span className="toolbar-label">Size:</span>
-                        <input
-                            type="range"
-                            min="10"
-                            max="40"
-                            value={highlighterSize}
-                            onChange={e => onHighlighterSizeChange(parseInt(e.target.value))}
-                            className="size-slider"
-                        />
-                        <span className="size-value">{highlighterSize}px</span>
-                    </div>
-                </>
-            )}
-
-            {/* Eraser Options */}
-            {currentTool === 'eraser' && (
-                <>
-                    <div className="toolbar-separator" />
-                    <div className="toolbar-group">
-                        <span className="toolbar-label">Mode:</span>
-                        <div className="eraser-mode-selector">
-                            {(['area', 'stroke', 'whiteout'] as EraserMode[]).map(mode => (
-                                <button
-                                    key={mode}
-                                    className={`eraser-mode-btn ${eraserMode === mode ? 'active' : ''}`}
-                                    onClick={() => onEraserModeChange(mode)}
-                                    title={ERASER_MODE_TOOLTIPS[mode]}
-                                >
-                                    {ERASER_MODE_LABELS[mode]}
-                                </button>
-                            ))}
-                        </div>
-                        <span className="toolbar-label">Size:</span>
-                        <input
-                            type="range"
-                            min="5"
-                            max="50"
-                            value={eraserSize}
-                            onChange={e => onEraserSizeChange(parseInt(e.target.value))}
-                            className="size-slider"
-                        />
-                        <span className="size-value">{eraserSize}px</span>
-                    </div>
-                </>
-            )}
 
             <div className="toolbar-spacer" />
 
-            {/* Actions */}
+            {/* Actions - compact */}
             <div className="toolbar-group">
                 <button
-                    className="toolbar-btn"
+                    className="toolbar-btn-sm"
                     onClick={onUndo}
                     disabled={!canUndo}
                     title="Undo (Ctrl+Z)"
-                >
-                    ↩️
-                </button>
+                >↩</button>
                 <button
-                    className="toolbar-btn"
+                    className="toolbar-btn-sm"
                     onClick={onRedo}
                     disabled={!canRedo}
-                    title="Redo (Ctrl+Shift+Z)"
-                >
-                    ↪️
-                </button>
-            </div>
-
-            <div className="toolbar-separator" />
-
-            <div className="toolbar-group">
+                    title="Redo (Ctrl+Y)"
+                >↪</button>
                 <button
-                    className="toolbar-btn save-btn"
+                    className="toolbar-btn-sm save-btn-sm"
                     onClick={onSave}
-                    title="Save annotations (Ctrl+S)"
-                >
-                    💾 Save
-                </button>
+                    title="Save (Ctrl+S)"
+                >💾</button>
             </div>
         </div>
     )

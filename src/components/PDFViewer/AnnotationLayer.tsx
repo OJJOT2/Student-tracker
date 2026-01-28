@@ -13,8 +13,7 @@ interface AnnotationLayerProps {
     pageNumber: number
     onAddStroke: (stroke: Stroke) => void
     onEraseStroke: (strokeId: string) => void
-    // Reserved for future area erase implementation
-    _onUpdateStrokes?: (strokes: Stroke[]) => void
+    onUpdateStrokes: (strokes: Stroke[]) => void
 }
 
 export function AnnotationLayer({
@@ -27,13 +26,14 @@ export function AnnotationLayer({
     strokes,
     pageNumber,
     onAddStroke,
-    onEraseStroke
+    onEraseStroke,
+    onUpdateStrokes
 }: AnnotationLayerProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [isDrawing, setIsDrawing] = useState(false)
     const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null)
     const lastPointRef = useRef<{ x: number; y: number } | null>(null)
-    const eraserPointsRef = useRef<Array<{ x: number; y: number; pressure: number }>>([])
+    const eraserPointsRef = useRef<Array<{ x: number; y: number }>>([])
 
     // Redraw all strokes using smooth rendering
     const redrawStrokes = useCallback(() => {
@@ -115,8 +115,8 @@ export function AnnotationLayer({
         return null
     }, [strokes])
 
-    // Handle area erase - removes points from strokes that intersect with eraser
-    const handleAreaErase = useCallback((x: number, y: number, eraserSize: number) => {
+    // Handle area erase - visual feedback during erase
+    const handleAreaEraseVisual = useCallback((x: number, y: number, eraserSize: number) => {
         const canvas = canvasRef.current
         if (!canvas) return
 
@@ -126,6 +126,64 @@ export function AnnotationLayer({
         // Visual feedback - erase on canvas immediately
         eraseArea(ctx, x, y, eraserSize)
     }, [])
+
+    // Commit area erase - actually modify stroke data
+    const commitAreaErase = useCallback((eraserPath: Array<{ x: number; y: number }>, eraserSize: number) => {
+        if (eraserPath.length === 0) return
+
+        // Filter stroke points that intersect with eraser path
+        const newStrokes: Stroke[] = []
+
+        for (const stroke of strokes) {
+            // Check each point in the stroke against the eraser path
+            let currentSegment: Array<{ x: number; y: number; pressure: number }> = []
+
+            for (const point of stroke.points) {
+                let shouldErase = false
+
+                // Check if this point intersects with any point in the eraser path
+                for (const eraserPoint of eraserPath) {
+                    const dx = point.x - eraserPoint.x
+                    const dy = point.y - eraserPoint.y
+                    const distance = Math.sqrt(dx * dx + dy * dy)
+
+                    if (distance < eraserSize + stroke.size / 2) {
+                        shouldErase = true
+                        break
+                    }
+                }
+
+                if (!shouldErase) {
+                    currentSegment.push(point)
+                } else {
+                    // End current segment if we have points
+                    if (currentSegment.length >= 2) {
+                        newStrokes.push({
+                            ...stroke,
+                            id: crypto.randomUUID(),
+                            points: [...currentSegment]
+                        })
+                    }
+                    currentSegment = []
+                }
+            }
+
+            // Add remaining segment
+            if (currentSegment.length >= 2) {
+                newStrokes.push({
+                    ...stroke,
+                    id: crypto.randomUUID(),
+                    points: currentSegment
+                })
+            }
+        }
+
+        // Only update if strokes actually changed
+        if (newStrokes.length !== strokes.length ||
+            newStrokes.some((s, i) => !strokes[i] || s.points.length !== strokes[i].points.length)) {
+            onUpdateStrokes(newStrokes)
+        }
+    }, [strokes, onUpdateStrokes])
 
     // Pointer event handlers
     const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -148,8 +206,8 @@ export function AnnotationLayer({
                 }
             } else if (eraserMode === 'area') {
                 // Area erase mode - start collecting erase points
-                eraserPointsRef.current = [pos]
-                handleAreaErase(pos.x, pos.y, size)
+                eraserPointsRef.current = [{ x: pos.x, y: pos.y }]
+                handleAreaEraseVisual(pos.x, pos.y, size)
                 setIsDrawing(true)
             } else if (eraserMode === 'whiteout') {
                 // White-out mode - create white stroke
@@ -178,7 +236,7 @@ export function AnnotationLayer({
             setCurrentStroke(newStroke)
             lastPointRef.current = pos
         }
-    }, [tool, eraserMode, color, size, pageNumber, getPointerPosition, findStrokeAtPoint, onEraseStroke, handleAreaErase])
+    }, [tool, eraserMode, color, size, pageNumber, getPointerPosition, findStrokeAtPoint, onEraseStroke, handleAreaEraseVisual])
 
     const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
         const pos = getPointerPosition(e)
@@ -190,8 +248,8 @@ export function AnnotationLayer({
                     onEraseStroke(strokeId)
                 }
             } else if (eraserMode === 'area' && isDrawing) {
-                eraserPointsRef.current.push(pos)
-                handleAreaErase(pos.x, pos.y, size)
+                eraserPointsRef.current.push({ x: pos.x, y: pos.y })
+                handleAreaEraseVisual(pos.x, pos.y, size)
             }
             // White-out handled below with other drawing tools
         }
@@ -217,7 +275,7 @@ export function AnnotationLayer({
             }
         })
         lastPointRef.current = pos
-    }, [tool, eraserMode, isDrawing, currentStroke, getPointerPosition, findStrokeAtPoint, onEraseStroke, handleAreaErase, size])
+    }, [tool, eraserMode, isDrawing, currentStroke, getPointerPosition, findStrokeAtPoint, onEraseStroke, handleAreaEraseVisual, size])
 
     const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
         const canvas = canvasRef.current
@@ -226,10 +284,8 @@ export function AnnotationLayer({
         }
 
         if (tool === 'eraser' && eraserMode === 'area' && isDrawing) {
-            // Area erase complete - need to rebuild strokes without erased areas
-            // For now, we just trigger a redraw from saved strokes
-            // A more sophisticated implementation would modify stroke points
-            redrawStrokes()
+            // Area erase complete - commit the changes to stroke data
+            commitAreaErase(eraserPointsRef.current, size)
         }
 
         if (isDrawing && currentStroke && currentStroke.points.length >= 2) {
@@ -240,7 +296,7 @@ export function AnnotationLayer({
         setCurrentStroke(null)
         lastPointRef.current = null
         eraserPointsRef.current = []
-    }, [tool, eraserMode, isDrawing, currentStroke, onAddStroke, redrawStrokes])
+    }, [tool, eraserMode, isDrawing, currentStroke, onAddStroke, commitAreaErase, size])
 
     // Cursor style based on tool
     const getCursor = () => {

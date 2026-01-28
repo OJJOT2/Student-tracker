@@ -89,31 +89,40 @@ function PDFPageWithAnnotations({
 
     return (
         <div
-            ref={pageRef}
-            className="pdf-page-item"
+            className="pdf-page-container"
+            style={{
+                width: pageWidth * scale,
+                height: pageHeight * scale,
+                flexShrink: 0
+            }}
             data-page={pageNumber}
-            style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
         >
-            <Page
-                pageNumber={pageNumber}
-                width={pageWidth}
-                renderTextLayer={true}
-                renderAnnotationLayer={true}
-                onLoadSuccess={handlePageLoad}
-            />
-            <AnnotationLayer
-                width={pageWidth}
-                height={pageHeight}
-                tool={tool}
-                eraserMode={eraserMode}
-                color={color}
-                size={size}
-                strokes={strokes}
-                pageNumber={pageNumber}
-                onAddStroke={onAddStroke}
-                onEraseStroke={onEraseStroke}
-                _onUpdateStrokes={onUpdateStrokes}
-            />
+            <div
+                ref={pageRef}
+                className="pdf-page-item"
+                style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
+            >
+                <Page
+                    pageNumber={pageNumber}
+                    width={pageWidth}
+                    renderTextLayer={true}
+                    renderAnnotationLayer={true}
+                    onLoadSuccess={handlePageLoad}
+                />
+                <AnnotationLayer
+                    width={pageWidth}
+                    height={pageHeight}
+                    tool={tool}
+                    eraserMode={eraserMode}
+                    color={color}
+                    size={size}
+                    strokes={strokes}
+                    pageNumber={pageNumber}
+                    onAddStroke={onAddStroke}
+                    onEraseStroke={onEraseStroke}
+                    onUpdateStrokes={onUpdateStrokes}
+                />
+            </div>
         </div>
     )
 }

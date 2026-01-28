@@ -22,6 +22,12 @@
     flex-wrap: wrap;
 }
 
+.pdf-toolbar.compact {
+    padding: 6px 12px;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
 .toolbar-group {
     display: flex;
     align-items: center;
@@ -35,10 +41,192 @@
     margin: 0 4px;
 }
 
+.toolbar-separator-sm {
+    width: 1px;
+    height: 20px;
+    background: var(--border-color, #444);
+    margin: 0 2px;
+}
+
 .toolbar-spacer {
     flex: 1;
 }
 
+/* Compact Toolbar Buttons */
+.toolbar-btn-sm {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 26px;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--text-primary, #fff);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s ease;
+}
+
+.toolbar-btn-sm:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.toolbar-btn-sm:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.toolbar-btn-sm.active {
+    background: var(--accent-primary, #6366f1);
+    border-color: var(--accent-primary, #6366f1);
+}
+
+.toolbar-btn-sm.save-btn-sm {
+    background: var(--success, #22c55e);
+}
+
+.toolbar-btn-sm.save-btn-sm:hover {
+    background: #1da34d;
+}
+
+.zoom-compact {
+    min-width: 42px;
+    font-family: monospace;
+    font-size: 10px;
+}
+
+/* Compact Page Input */
+.page-input-compact {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.page-input-compact .page-input {
+    width: 28px;
+    font-size: 11px;
+}
+
+/* Tool Options Dropdown */
+.tool-dropdown-container {
+    position: relative;
+}
+
+.tool-options-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    background: var(--bg-secondary, #16213e);
+    border: 1px solid var(--border-color, #444);
+    border-radius: 6px;
+    padding: 8px;
+    z-index: 100;
+    min-width: 160px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.dropdown-section {
+    margin-bottom: 6px;
+}
+
+.dropdown-section:last-child {
+    margin-bottom: 0;
+}
+
+.dropdown-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.dropdown-row.size-row {
+    gap: 6px;
+}
+
+/* Compact Color Dots */
+.color-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.color-dot:hover {
+    transform: scale(1.15);
+}
+
+.color-dot.active {
+    border-color: #fff;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.color-input-sm {
+    width: 18px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+/* Compact Eraser Modes */
+.eraser-modes {
+    justify-content: center;
+}
+
+.eraser-mode-sm {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--text-primary, #fff);
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s ease;
+}
+
+.eraser-mode-sm:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.eraser-mode-sm.active {
+    background: var(--accent-primary, #6366f1);
+    border-color: var(--accent-primary, #6366f1);
+}
+
+/* Compact Size Slider */
+.size-label {
+    font-size: 10px;
+    color: var(--text-secondary, #aaa);
+}
+
+.size-slider-sm {
+    width: 60px;
+    height: 3px;
+    accent-color: var(--accent-primary, #6366f1);
+}
+
+.size-value-sm {
+    font-size: 10px;
+    color: var(--text-muted, #888);
+    min-width: 24px;
+}
+
+/* Original toolbar button styles (kept for backwards compatibility) */
 .toolbar-btn {
     display: flex;
     align-items: center;
@@ -265,6 +453,10 @@
     background: #fff;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     flex-shrink: 0;
+}
+
+/* Page container - properly sized for scaling */
+.pdf-page-container {
     scroll-snap-align: center;
 }
 
