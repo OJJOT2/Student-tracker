@@ -418,7 +418,7 @@
     padding: 20px;
     background: var(--bg-tertiary, #1a1a2e);
     scroll-behavior: smooth;
-    scroll-snap-type: x mandatory;
+    /* Removed scroll-snap-type for free scrolling */
 }
 
 .pdf-loading,
@@ -457,7 +457,7 @@
 
 /* Page container - properly sized for scaling */
 .pdf-page-container {
-    scroll-snap-align: center;
+    /* Removed scroll-snap-align for free scrolling */
 }
 
 /* Page placeholder for lazy loading */

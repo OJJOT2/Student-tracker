@@ -66,6 +66,7 @@ function PDFPageWithAnnotations({
 
     const handlePageLoad = useCallback(({ height, width }: { height: number; width: number }) => {
         // Calculate actual page height based on rendered width
+        // Width and height here are already scaled if we pass scaled width to Page
         const aspectRatio = height / width
         setPageHeight(pageWidth * aspectRatio)
     }, [pageWidth])
@@ -100,18 +101,19 @@ function PDFPageWithAnnotations({
             <div
                 ref={pageRef}
                 className="pdf-page-item"
-                style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
+                style={{ transformOrigin: 'top left' }}
             >
                 <Page
                     pageNumber={pageNumber}
-                    width={pageWidth}
+                    width={pageWidth * scale} // Native scaling
                     renderTextLayer={true}
                     renderAnnotationLayer={true}
                     onLoadSuccess={handlePageLoad}
                 />
                 <AnnotationLayer
-                    width={pageWidth}
-                    height={pageHeight}
+                    width={pageWidth * scale}
+                    height={pageHeight * scale}
+                    scale={scale}
                     tool={tool}
                     eraserMode={eraserMode}
                     color={color}

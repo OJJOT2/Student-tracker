@@ -5,6 +5,7 @@ import { drawSmoothStroke, drawQuickStroke, eraseArea, drawWhiteOut } from './Sm
 interface AnnotationLayerProps {
     width: number
     height: number
+    scale: number
     tool: DrawingTool
     eraserMode: EraserMode
     color: string
@@ -19,6 +20,7 @@ interface AnnotationLayerProps {
 export function AnnotationLayer({
     width,
     height,
+    scale,
     tool,
     eraserMode,
     color,
@@ -43,8 +45,12 @@ export function AnnotationLayer({
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
-        // Clear canvas
+        // Clear canvas with identity transform (clearing the whole pixel buffer)
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
         ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+        // Apply scale for drawing (so 1 unit = 1 page unit)
+        ctx.scale(scale, scale)
 
         // Draw all saved strokes with smooth rendering
         strokes.forEach(stroke => {
@@ -67,8 +73,9 @@ export function AnnotationLayer({
 
         // Draw current stroke in progress (quick rendering for responsiveness)
         if (currentStroke && currentStroke.points.length >= 2) {
+            // Context is already scaled from above
             if (currentStroke.tool === 'whiteout') {
-                drawWhiteOut(canvasRef.current!.getContext('2d')!, currentStroke.points, currentStroke.size)
+                drawWhiteOut(ctx, currentStroke.points, currentStroke.size)
             } else {
                 drawQuickStroke(
                     ctx,
@@ -79,25 +86,31 @@ export function AnnotationLayer({
                 )
             }
         }
-    }, [strokes, currentStroke])
+    }, [strokes, currentStroke, scale])
 
     // Redraw when strokes change
     useEffect(() => {
         redrawStrokes()
     }, [redrawStrokes])
 
-    // Get pointer position relative to canvas
+    // Get pointer position relative to canvas, accounting for CSS transform scale
     const getPointerPosition = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
         const canvas = canvasRef.current
         if (!canvas) return { x: 0, y: 0, pressure: 0.5 }
 
         const rect = canvas.getBoundingClientRect()
+        // Map screen coordinates to canvas internal coordinates
+        const scaleX = canvas.width / rect.width
+        const scaleY = canvas.height / rect.height
+
+        // Convert to "Page Space" (unscaled coordinates)
+        // We divide by 'scale' because the canvas pixel dimensions are now scaled up
         return {
-            x: (e.clientX - rect.left) * (canvas.width / rect.width),
-            y: (e.clientY - rect.top) * (canvas.height / rect.height),
+            x: ((e.clientX - rect.left) * scaleX) / scale,
+            y: ((e.clientY - rect.top) * scaleY) / scale,
             pressure: e.pressure > 0 ? e.pressure : 0.5
         }
-    }, [])
+    }, [scale])
 
     // Check if point is near a stroke (for stroke eraser)
     const findStrokeAtPoint = useCallback((x: number, y: number): string | null => {
@@ -124,8 +137,13 @@ export function AnnotationLayer({
         if (!ctx) return
 
         // Visual feedback - erase on canvas immediately
+        // We need to apply the scale here too because eraseArea expects the context to be set up or handles it
+        // Since eraseArea draws directly, we need to transform the context
+        ctx.save()
+        ctx.scale(scale, scale)
         eraseArea(ctx, x, y, eraserSize)
-    }, [])
+        ctx.restore()
+    }, [scale])
 
     // Commit area erase - actually modify stroke data
     const commitAreaErase = useCallback((eraserPath: Array<{ x: number; y: number }>, eraserSize: number) => {
