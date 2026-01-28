@@ -13,10 +13,11 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString()
 
 export type DrawingTool = 'select' | 'pen' | 'highlighter' | 'eraser'
+export type EraserMode = 'area' | 'stroke' | 'whiteout'
 
 export interface Stroke {
     id: string
-    tool: 'pen' | 'highlighter'
+    tool: 'pen' | 'highlighter' | 'whiteout'
     points: Array<{ x: number; y: number; pressure: number }>
     color: string
     size: number
@@ -30,19 +31,110 @@ interface PDFViewerProps {
     initialAnnotations?: Record<number, Stroke[]>
 }
 
+// Component for a single PDF page with annotation layer
+interface PDFPageWithAnnotationsProps {
+    pageNumber: number
+    pageWidth: number
+    scale: number
+    tool: DrawingTool
+    eraserMode: EraserMode
+    color: string
+    size: number
+    strokes: Stroke[]
+    onAddStroke: (stroke: Stroke) => void
+    onEraseStroke: (strokeId: string) => void
+    onUpdateStrokes: (strokes: Stroke[]) => void
+    isVisible: boolean
+}
+
+function PDFPageWithAnnotations({
+    pageNumber,
+    pageWidth,
+    scale,
+    tool,
+    eraserMode,
+    color,
+    size,
+    strokes,
+    onAddStroke,
+    onEraseStroke,
+    onUpdateStrokes,
+    isVisible
+}: PDFPageWithAnnotationsProps) {
+    const pageRef = useRef<HTMLDivElement>(null)
+    const [pageHeight, setPageHeight] = useState(pageWidth * 1.414)
+
+    const handlePageLoad = useCallback(({ height, width }: { height: number; width: number }) => {
+        // Calculate actual page height based on rendered width
+        const aspectRatio = height / width
+        setPageHeight(pageWidth * aspectRatio)
+    }, [pageWidth])
+
+    if (!isVisible) {
+        // Placeholder for non-visible pages
+        return (
+            <div
+                className="pdf-page-placeholder"
+                style={{
+                    width: pageWidth * scale,
+                    height: pageHeight * scale,
+                    minWidth: pageWidth * scale
+                }}
+                data-page={pageNumber}
+            >
+                <span>Page {pageNumber}</span>
+            </div>
+        )
+    }
+
+    return (
+        <div
+            ref={pageRef}
+            className="pdf-page-item"
+            data-page={pageNumber}
+            style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
+        >
+            <Page
+                pageNumber={pageNumber}
+                width={pageWidth}
+                renderTextLayer={true}
+                renderAnnotationLayer={true}
+                onLoadSuccess={handlePageLoad}
+            />
+            <AnnotationLayer
+                width={pageWidth}
+                height={pageHeight}
+                tool={tool}
+                eraserMode={eraserMode}
+                color={color}
+                size={size}
+                strokes={strokes}
+                pageNumber={pageNumber}
+                onAddStroke={onAddStroke}
+                onEraseStroke={onEraseStroke}
+                _onUpdateStrokes={onUpdateStrokes}
+            />
+        </div>
+    )
+}
+
 export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFViewerProps) {
     const containerRef = useRef<HTMLDivElement>(null)
+    const scrollContainerRef = useRef<HTMLDivElement>(null)
     const [numPages, setNumPages] = useState(0)
     const [currentPage, setCurrentPage] = useState(1)
     const [scale, setScale] = useState(1)
     const [pageWidth, setPageWidth] = useState(0)
+    const [visiblePages, setVisiblePages] = useState<Set<number>>(new Set([1]))
 
     // Tool state
     const [currentTool, setCurrentTool] = useState<DrawingTool>('select')
+    const [eraserMode, setEraserMode] = useState<EraserMode>('stroke')
     const [penColor, setPenColor] = useState('#000000')
     const [highlighterColor, setHighlighterColor] = useState('#ffff00')
     const [penSize, setPenSize] = useState(2)
     const [highlighterSize, setHighlighterSize] = useState(20)
+    const [eraserSize, setEraserSize] = useState(20)
 
     // Annotations per page
     const [annotations, setAnnotations] = useState<Record<number, Stroke[]>>(initialAnnotations)
@@ -54,10 +146,8 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
     const [error, setError] = useState<string | null>(null)
 
     // Memoize the file object to prevent unnecessary reloads
-    // Clone the ArrayBuffer to avoid "detached ArrayBuffer" errors when the Worker transfers ownership
     const pdfFile = useMemo(() => {
         if (!data) return null
-        // Clone the ArrayBuffer to create a fresh copy
         const clonedData = data.slice(0)
         return { data: clonedData }
     }, [data])
@@ -65,7 +155,7 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
     // Calculate fit width on mount
     useEffect(() => {
         if (containerRef.current) {
-            const containerWidth = containerRef.current.clientWidth - 80 // padding
+            const containerWidth = containerRef.current.clientWidth - 80
             setPageWidth(containerWidth)
         }
     }, [])
@@ -74,6 +164,8 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
     const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
         setNumPages(numPages)
         setLoading(false)
+        // Initialize visible pages (first few pages)
+        setVisiblePages(new Set([1, 2, 3]))
     }, [])
 
     const onDocumentLoadError = useCallback((error: Error) => {
@@ -81,11 +173,74 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
         setLoading(false)
     }, [])
 
+    // Track visible pages using IntersectionObserver
+    useEffect(() => {
+        if (!scrollContainerRef.current || numPages === 0) return
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                setVisiblePages(prev => {
+                    const next = new Set(prev)
+                    entries.forEach(entry => {
+                        const pageNum = parseInt(entry.target.getAttribute('data-page') || '0')
+                        if (pageNum > 0) {
+                            if (entry.isIntersecting) {
+                                // Add page and adjacent pages for buffer
+                                next.add(pageNum)
+                                if (pageNum > 1) next.add(pageNum - 1)
+                                if (pageNum < numPages) next.add(pageNum + 1)
+                            }
+                        }
+                    })
+                    return next
+                })
+            },
+            {
+                root: scrollContainerRef.current,
+                rootMargin: '200px',
+                threshold: 0.1
+            }
+        )
+
+        // Observe all page elements
+        const pageElements = scrollContainerRef.current.querySelectorAll('[data-page]')
+        pageElements.forEach(el => observer.observe(el))
+
+        return () => observer.disconnect()
+    }, [numPages, loading])
+
+    // Track current page from scroll position
+    useEffect(() => {
+        const scrollContainer = scrollContainerRef.current
+        if (!scrollContainer) return
+
+        const handleScroll = () => {
+            const scrollLeft = scrollContainer.scrollLeft
+            const pageWidthWithGap = (pageWidth * scale) + 20 // 20px gap
+            const currentPageNum = Math.floor(scrollLeft / pageWidthWithGap) + 1
+            if (currentPageNum !== currentPage && currentPageNum > 0 && currentPageNum <= numPages) {
+                setCurrentPage(currentPageNum)
+            }
+        }
+
+        scrollContainer.addEventListener('scroll', handleScroll)
+        return () => scrollContainer.removeEventListener('scroll', handleScroll)
+    }, [pageWidth, scale, currentPage, numPages])
+
     // Navigation
     const goToPage = useCallback((page: number) => {
         const targetPage = Math.max(1, Math.min(page, numPages))
         setCurrentPage(targetPage)
-    }, [numPages])
+
+        // Scroll to page
+        if (scrollContainerRef.current) {
+            const pageWidthWithGap = (pageWidth * scale) + 20
+            scrollContainerRef.current.scrollTo({
+                left: (targetPage - 1) * pageWidthWithGap,
+                behavior: 'smooth'
+            })
+        }
+    }, [numPages, pageWidth, scale])
 
     const nextPage = useCallback(() => goToPage(currentPage + 1), [currentPage, goToPage])
     const prevPage = useCallback(() => goToPage(currentPage - 1), [currentPage, goToPage])
@@ -95,34 +250,63 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
     const zoomOut = useCallback(() => setScale(s => Math.max(0.5, s - 0.25)), [])
     const resetZoom = useCallback(() => setScale(1), [])
 
-    // Add stroke to current page
-    const addStroke = useCallback((stroke: Stroke) => {
-        setAnnotations(prev => {
-            const pageStrokes = prev[currentPage] || []
-            const newAnnotations = {
-                ...prev,
-                [currentPage]: [...pageStrokes, stroke]
-            }
-            // Add to history
-            setHistory(h => [...h.slice(0, historyIndex + 1), newAnnotations])
-            setHistoryIndex(i => i + 1)
-            return newAnnotations
-        })
-    }, [currentPage, historyIndex])
+    // Ctrl + Mouse wheel zoom
+    useEffect(() => {
+        const container = containerRef.current
+        if (!container) return
 
-    // Erase stroke
-    const eraseStroke = useCallback((strokeId: string) => {
+        const handleWheel = (e: WheelEvent) => {
+            if (e.ctrlKey) {
+                e.preventDefault()
+                const delta = e.deltaY > 0 ? -0.1 : 0.1
+                setScale(s => Math.max(0.5, Math.min(3, s + delta)))
+            }
+        }
+
+        container.addEventListener('wheel', handleWheel, { passive: false })
+        return () => container.removeEventListener('wheel', handleWheel)
+    }, [])
+
+    // Add stroke to specific page
+    const addStrokeToPage = useCallback((pageNumber: number) => (stroke: Stroke) => {
         setAnnotations(prev => {
-            const pageStrokes = prev[currentPage] || []
+            const pageStrokes = prev[pageNumber] || []
             const newAnnotations = {
                 ...prev,
-                [currentPage]: pageStrokes.filter(s => s.id !== strokeId)
+                [pageNumber]: [...pageStrokes, stroke]
             }
             setHistory(h => [...h.slice(0, historyIndex + 1), newAnnotations])
             setHistoryIndex(i => i + 1)
             return newAnnotations
         })
-    }, [currentPage, historyIndex])
+    }, [historyIndex])
+
+    // Erase stroke from specific page
+    const eraseStrokeFromPage = useCallback((pageNumber: number) => (strokeId: string) => {
+        setAnnotations(prev => {
+            const pageStrokes = prev[pageNumber] || []
+            const newAnnotations = {
+                ...prev,
+                [pageNumber]: pageStrokes.filter(s => s.id !== strokeId)
+            }
+            setHistory(h => [...h.slice(0, historyIndex + 1), newAnnotations])
+            setHistoryIndex(i => i + 1)
+            return newAnnotations
+        })
+    }, [historyIndex])
+
+    // Update strokes for specific page (for area erase)
+    const updateStrokesForPage = useCallback((pageNumber: number) => (strokes: Stroke[]) => {
+        setAnnotations(prev => {
+            const newAnnotations = {
+                ...prev,
+                [pageNumber]: strokes
+            }
+            setHistory(h => [...h.slice(0, historyIndex + 1), newAnnotations])
+            setHistoryIndex(i => i + 1)
+            return newAnnotations
+        })
+    }, [historyIndex])
 
     // Undo/Redo
     const undo = useCallback(() => {
@@ -147,7 +331,6 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Don't handle if typing
             if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
 
             const key = e.key.toLowerCase()
@@ -194,6 +377,18 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
                 setCurrentTool('select')
             }
 
+            // Eraser modes (1, 2, 3 when eraser is selected)
+            else if (currentTool === 'eraser' && key === '1') {
+                e.preventDefault()
+                setEraserMode('area')
+            } else if (currentTool === 'eraser' && key === '2') {
+                e.preventDefault()
+                setEraserMode('stroke')
+            } else if (currentTool === 'eraser' && key === '3') {
+                e.preventDefault()
+                setEraserMode('whiteout')
+            }
+
             // Undo/Redo
             else if ((e.ctrlKey || e.metaKey) && key === 'z' && !e.shiftKey) {
                 e.preventDefault()
@@ -215,10 +410,16 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
 
         document.addEventListener('keydown', handleKeyDown)
         return () => document.removeEventListener('keydown', handleKeyDown)
-    }, [prevPage, nextPage, goToPage, numPages, zoomIn, zoomOut, resetZoom, undo, redo, handleSave])
+    }, [prevPage, nextPage, goToPage, numPages, zoomIn, zoomOut, resetZoom, undo, redo, handleSave, currentTool])
 
     const currentColor = currentTool === 'highlighter' ? highlighterColor : penColor
-    const currentSize = currentTool === 'highlighter' ? highlighterSize : penSize
+    const currentSize = currentTool === 'eraser' ? eraserSize : (currentTool === 'highlighter' ? highlighterSize : penSize)
+
+    // Generate page numbers array
+    const pageNumbers = useMemo(() =>
+        Array.from({ length: numPages }, (_, i) => i + 1),
+        [numPages]
+    )
 
     return (
         <div ref={containerRef} className="pdf-viewer" tabIndex={0}>
@@ -228,10 +429,12 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
                 numPages={numPages}
                 scale={scale}
                 currentTool={currentTool}
+                eraserMode={eraserMode}
                 penColor={penColor}
                 highlighterColor={highlighterColor}
                 penSize={penSize}
                 highlighterSize={highlighterSize}
+                eraserSize={eraserSize}
                 canUndo={historyIndex > 0}
                 canRedo={historyIndex < history.length - 1}
                 onPageChange={goToPage}
@@ -241,10 +444,12 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
                 onZoomOut={zoomOut}
                 onResetZoom={resetZoom}
                 onToolChange={setCurrentTool}
+                onEraserModeChange={setEraserMode}
                 onPenColorChange={setPenColor}
                 onHighlighterColorChange={setHighlighterColor}
                 onPenSizeChange={setPenSize}
                 onHighlighterSizeChange={setHighlighterSize}
+                onEraserSizeChange={setEraserSize}
                 onUndo={undo}
                 onRedo={redo}
                 onSave={handleSave}
@@ -253,8 +458,8 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
             {/* Title */}
             {title && <div className="pdf-title">{title}</div>}
 
-            {/* PDF Container */}
-            <div className="pdf-container">
+            {/* PDF Container with horizontal scroll */}
+            <div className="pdf-container" ref={scrollContainerRef}>
                 {loading && <div className="pdf-loading">Loading PDF...</div>}
                 {error && <div className="pdf-error">Error: {error}</div>}
 
@@ -264,26 +469,24 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
                     onLoadError={onDocumentLoadError}
                     loading=""
                 >
-                    <div className="pdf-page-wrapper" style={{ transform: `scale(${scale})` }}>
-                        <Page
-                            pageNumber={currentPage}
-                            width={pageWidth}
-                            renderTextLayer={true}
-                            renderAnnotationLayer={true}
-                        />
-
-                        {/* Annotation Layer */}
-                        <AnnotationLayer
-                            width={pageWidth}
-                            height={pageWidth * 1.414} // A4 ratio approximation
-                            tool={currentTool}
-                            color={currentColor}
-                            size={currentSize}
-                            strokes={annotations[currentPage] || []}
-                            pageNumber={currentPage}
-                            onAddStroke={addStroke}
-                            onEraseStroke={eraseStroke}
-                        />
+                    <div className="pdf-pages-horizontal">
+                        {pageNumbers.map(pageNum => (
+                            <PDFPageWithAnnotations
+                                key={pageNum}
+                                pageNumber={pageNum}
+                                pageWidth={pageWidth}
+                                scale={scale}
+                                tool={currentTool}
+                                eraserMode={eraserMode}
+                                color={currentColor}
+                                size={currentSize}
+                                strokes={annotations[pageNum] || []}
+                                onAddStroke={addStrokeToPage(pageNum)}
+                                onEraseStroke={eraseStrokeFromPage(pageNum)}
+                                onUpdateStrokes={updateStrokesForPage(pageNum)}
+                                isVisible={visiblePages.has(pageNum)}
+                            />
+                        ))}
                     </div>
                 </Document>
             </div>

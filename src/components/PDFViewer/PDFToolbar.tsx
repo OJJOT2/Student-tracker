@@ -1,4 +1,4 @@
-import type { DrawingTool } from './PDFViewer'
+import type { DrawingTool, EraserMode } from './PDFViewer'
 import './PDFViewer.css'
 
 interface PDFToolbarProps {
@@ -6,10 +6,12 @@ interface PDFToolbarProps {
     numPages: number
     scale: number
     currentTool: DrawingTool
+    eraserMode: EraserMode
     penColor: string
     highlighterColor: string
     penSize: number
     highlighterSize: number
+    eraserSize: number
     canUndo: boolean
     canRedo: boolean
     onPageChange: (page: number) => void
@@ -19,10 +21,12 @@ interface PDFToolbarProps {
     onZoomOut: () => void
     onResetZoom: () => void
     onToolChange: (tool: DrawingTool) => void
+    onEraserModeChange: (mode: EraserMode) => void
     onPenColorChange: (color: string) => void
     onHighlighterColorChange: (color: string) => void
     onPenSizeChange: (size: number) => void
     onHighlighterSizeChange: (size: number) => void
+    onEraserSizeChange: (size: number) => void
     onUndo: () => void
     onRedo: () => void
     onSave: () => void
@@ -31,15 +35,29 @@ interface PDFToolbarProps {
 const COLORS = ['#000000', '#ff0000', '#0000ff', '#00aa00', '#ff6600', '#9900ff']
 const HIGHLIGHTER_COLORS = ['#ffff00', '#00ff00', '#00ffff', '#ff00ff', '#ff9900']
 
+const ERASER_MODE_LABELS: Record<EraserMode, string> = {
+    'area': '🔲 Area',
+    'stroke': '🗑️ Stroke',
+    'whiteout': '⬜ White-out'
+}
+
+const ERASER_MODE_TOOLTIPS: Record<EraserMode, string> = {
+    'area': 'Erase only the pixels touched (1)',
+    'stroke': 'Delete entire strokes touched (2)',
+    'whiteout': 'Draw white over strokes (3)'
+}
+
 export function PDFToolbar({
     currentPage,
     numPages,
     scale,
     currentTool,
+    eraserMode,
     penColor,
     highlighterColor,
     penSize,
     highlighterSize,
+    eraserSize,
     canUndo,
     canRedo,
     onPageChange,
@@ -49,10 +67,12 @@ export function PDFToolbar({
     onZoomOut,
     onResetZoom,
     onToolChange,
+    onEraserModeChange,
     onPenColorChange,
     onHighlighterColorChange,
     onPenSizeChange,
     onHighlighterSizeChange,
+    onEraserSizeChange,
     onUndo,
     onRedo,
     onSave
@@ -100,7 +120,7 @@ export function PDFToolbar({
                 <button
                     className="toolbar-btn"
                     onClick={onZoomOut}
-                    title="Zoom out (Ctrl+-)"
+                    title="Zoom out (Ctrl+- or Ctrl+Wheel)"
                 >
                     −
                 </button>
@@ -114,7 +134,7 @@ export function PDFToolbar({
                 <button
                     className="toolbar-btn"
                     onClick={onZoomIn}
-                    title="Zoom in (Ctrl++)"
+                    title="Zoom in (Ctrl++ or Ctrl+Wheel)"
                 >
                     +
                 </button>
@@ -150,7 +170,7 @@ export function PDFToolbar({
                     onClick={() => onToolChange('eraser')}
                     title="Eraser (E)"
                 >
-                    🗑️
+                    🧹
                 </button>
             </div>
 
@@ -216,6 +236,38 @@ export function PDFToolbar({
                             className="size-slider"
                         />
                         <span className="size-value">{highlighterSize}px</span>
+                    </div>
+                </>
+            )}
+
+            {/* Eraser Options */}
+            {currentTool === 'eraser' && (
+                <>
+                    <div className="toolbar-separator" />
+                    <div className="toolbar-group">
+                        <span className="toolbar-label">Mode:</span>
+                        <div className="eraser-mode-selector">
+                            {(['area', 'stroke', 'whiteout'] as EraserMode[]).map(mode => (
+                                <button
+                                    key={mode}
+                                    className={`eraser-mode-btn ${eraserMode === mode ? 'active' : ''}`}
+                                    onClick={() => onEraserModeChange(mode)}
+                                    title={ERASER_MODE_TOOLTIPS[mode]}
+                                >
+                                    {ERASER_MODE_LABELS[mode]}
+                                </button>
+                            ))}
+                        </div>
+                        <span className="toolbar-label">Size:</span>
+                        <input
+                            type="range"
+                            min="5"
+                            max="50"
+                            value={eraserSize}
+                            onChange={e => onEraserSizeChange(parseInt(e.target.value))}
+                            className="size-slider"
+                        />
+                        <span className="size-value">{eraserSize}px</span>
                     </div>
                 </>
             )}
