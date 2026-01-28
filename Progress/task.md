@@ -7,7 +7,7 @@
 - [x] **Stage 4** — Session Metadata System ✅ IMPLEMENTED
 - [x] **Stage 5** — Custom Video Player (Core) ✅ IMPLEMENTED
 - [x] **Stage 6** — Video Advanced Features ✅ IMPLEMENTED
-- [ ] **Stage 7** — Internal PDF Viewer
+- [x] **Stage 7** — Internal PDF Viewer ✅ IMPLEMENTED
 - [ ] **Stage 8** — Split Screen System
 - [ ] **Stage 9** — Focus Mode
 - [ ] **Stage 10** — Dashboard & Analytics
@@ -16,6 +16,22 @@
 ---
 
 ## Completed in This Session
+
+### Stage 7: Internal PDF Viewer
+- **PDF Rendering** with react-pdf (PDF.js)
+- **Annotation Tools**
+  - Pen tool with pressure sensitivity (XP Pen/graphics tablet support)
+  - Highlighter with adjustable opacity
+  - Eraser tool
+  - Color picker and stroke size controls
+- **Navigation & Zoom**
+  - Page navigation (prev/next, jump to page)
+  - Zoom in/out controls
+  - Keyboard shortcuts for everything
+- **Integration**
+  - PDFPage with sidebar listing all PDFs
+  - Link between Video Player and PDF viewer
+  - Route at `/pdf`
 
 ### Stage 6: Video Advanced Features
 - **Timestamp Marks System**
@@ -45,19 +61,7 @@
 
 ---
 
-## Next Session: Continue from Stage 7
-
-### Stage 7 — Internal PDF Viewer
-- PDF rendering with react-pdf or similar
-- Page navigation
-- Zoom controls
-- Annotations (highlight, pen, text)
-
-### Remaining Stages
-- Stage 8: Split Screen System
-- Stage 9: Focus Mode
-- Stage 10: Dashboard & Analytics
-- Stage 11: Polish & Extensibility
+## Next: Stage 8 — Split Screen System
 
 ---
 

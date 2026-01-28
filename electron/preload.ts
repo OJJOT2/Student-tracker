@@ -62,7 +62,11 @@ const api = {
 
     // Media
     getMediaPath: (filePath: string): Promise<string> =>
-        ipcRenderer.invoke('media:path', filePath)
+        ipcRenderer.invoke('media:path', filePath),
+
+    // File reading (for PDFs)
+    readFile: (filePath: string): Promise<ArrayBuffer> =>
+        ipcRenderer.invoke('file:read', filePath)
 }
 
 contextBridge.exposeInMainWorld('api', api)

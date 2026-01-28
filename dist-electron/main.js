@@ -81,6 +81,15 @@ electron.ipcMain.handle("session:write", async (_, sessionPath, metadata) => {
 electron.ipcMain.handle("media:path", async (_, filePath) => {
   return `media://${encodeURIComponent(filePath)}`;
 });
+electron.ipcMain.handle("file:read", async (_, filePath) => {
+  try {
+    const buffer = await fs.readFile(filePath);
+    return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+  } catch (err) {
+    console.error("Failed to read file:", filePath, err);
+    throw err;
+  }
+});
 async function scanDirectory(dirPath) {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
   const files = entries.filter((e) => e.isFile());

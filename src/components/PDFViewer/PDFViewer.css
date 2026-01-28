@@ -1,0 +1,290 @@
+/* ================================================
+   PDF VIEWER CONTAINER
+   ================================================ */
+.pdf-viewer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--bg-tertiary, #1a1a2e);
+    outline: none;
+}
+
+/* ================================================
+   TOOLBAR
+   ================================================ */
+.pdf-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg-secondary, #16213e);
+    border-bottom: 1px solid var(--border-color, #333);
+    flex-wrap: wrap;
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.toolbar-separator {
+    width: 1px;
+    height: 24px;
+    background: var(--border-color, #444);
+    margin: 0 4px;
+}
+
+.toolbar-spacer {
+    flex: 1;
+}
+
+.toolbar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--text-primary, #fff);
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s ease;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.toolbar-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.toolbar-btn.active {
+    background: var(--accent-primary, #6366f1);
+    border-color: var(--accent-primary, #6366f1);
+}
+
+.toolbar-btn.save-btn {
+    background: var(--success, #22c55e);
+    padding: 4px 12px;
+}
+
+.toolbar-btn.save-btn:hover {
+    background: #1da34d;
+}
+
+.zoom-indicator {
+    min-width: 50px;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+/* Page Input */
+.page-input-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.page-input {
+    width: 40px;
+    background: transparent;
+    border: none;
+    color: var(--text-primary, #fff);
+    text-align: center;
+    font-size: 13px;
+    outline: none;
+}
+
+.page-input::-webkit-inner-spin-button,
+.page-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.page-divider {
+    color: var(--text-muted, #666);
+}
+
+.page-total {
+    color: var(--text-secondary, #aaa);
+    font-size: 13px;
+}
+
+/* Color Picker */
+.color-picker {
+    display: flex;
+    gap: 4px;
+}
+
+.color-btn {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.color-btn:hover {
+    transform: scale(1.1);
+}
+
+.color-btn.active {
+    border-color: #fff;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.color-input {
+    width: 24px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Size Slider */
+.toolbar-label {
+    font-size: 12px;
+    color: var(--text-secondary, #aaa);
+    margin-left: 8px;
+}
+
+.size-slider {
+    width: 60px;
+    height: 4px;
+    accent-color: var(--accent-primary, #6366f1);
+}
+
+.size-value {
+    font-size: 11px;
+    color: var(--text-muted, #666);
+    min-width: 30px;
+}
+
+/* ================================================
+   PDF TITLE
+   ================================================ */
+.pdf-title {
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--text-primary, #fff);
+    font-size: 14px;
+    font-weight: 500;
+    border-bottom: 1px solid var(--border-color, #333);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ================================================
+   PDF CONTAINER
+   ================================================ */
+.pdf-container {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    background: var(--bg-tertiary, #1a1a2e);
+}
+
+.pdf-loading,
+.pdf-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: var(--text-secondary, #aaa);
+    font-size: 16px;
+}
+
+.pdf-error {
+    color: var(--error, #ef4444);
+}
+
+/* ================================================
+   PDF PAGE
+   ================================================ */
+.pdf-page-wrapper {
+    position: relative;
+    background: #fff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transform-origin: top center;
+    transition: transform 0.1s ease;
+}
+
+/* react-pdf page styling */
+.react-pdf__Page {
+    display: block !important;
+}
+
+.react-pdf__Page__canvas {
+    display: block !important;
+}
+
+.react-pdf__Page__textContent {
+    user-select: text;
+}
+
+/* ================================================
+   ANNOTATION LAYER
+   ================================================ */
+.annotation-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+/* ================================================
+   PAGE INDICATOR
+   ================================================ */
+.pdf-page-indicator {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    z-index: 100;
+}
+
+/* ================================================
+   KEYBOARD SHORTCUTS TOOLTIP
+   ================================================ */
+.pdf-shortcuts-tooltip {
+    position: absolute;
+    top: 50px;
+    right: 16px;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #fff;
+    z-index: 200;
+}
+
+.pdf-shortcuts-tooltip kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    font-family: monospace;
+    margin-right: 8px;
+}

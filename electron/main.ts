@@ -148,6 +148,17 @@ ipcMain.handle('media:path', async (_, filePath: string) => {
     return `media://${encodeURIComponent(filePath)}`
 })
 
+// Read file as buffer (for PDFs)
+ipcMain.handle('file:read', async (_, filePath: string) => {
+    try {
+        const buffer = await fs.readFile(filePath)
+        return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
+    } catch (err) {
+        console.error('Failed to read file:', filePath, err)
+        throw err
+    }
+})
+
 // ============= DIRECTORY SCANNER =============
 
 async function scanDirectory(dirPath: string): Promise<FolderNode> {

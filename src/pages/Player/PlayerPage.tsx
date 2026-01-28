@@ -198,6 +198,22 @@ export function PlayerPage() {
                     })}
                 </div>
 
+                {/* PDFs Link */}
+                {currentSession.pdfFiles.length > 0 && (
+                    <>
+                        <h3>📄 PDFs</h3>
+                        <button
+                            className="sidebar-item"
+                            onClick={() => navigate('/pdf')}
+                        >
+                            <span className="item-status">📄</span>
+                            <span className="item-name">
+                                {currentSession.pdfFiles.length} PDF(s)
+                            </span>
+                        </button>
+                    </>
+                )}
+
                 {/* Keyboard Shortcuts Help */}
                 <div className="shortcuts-help">
                     <h4>⌨️ Shortcuts</h4>

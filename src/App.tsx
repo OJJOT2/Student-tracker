@@ -4,6 +4,7 @@ import { SessionsPage } from './pages/Sessions/SessionsPage'
 import { FocusPage } from './pages/Focus/FocusPage'
 import { DashboardPage } from './pages/Dashboard/DashboardPage'
 import { PlayerPage } from './pages/Player/PlayerPage'
+import { PDFPage } from './pages/PDF/PDFPage'
 import { TabBar } from './components/TabBar/TabBar'
 import { useSessionStore } from './stores/sessionStore'
 
@@ -18,6 +19,7 @@ function App() {
             <Routes>
                 {/* Player page - full screen, no tab bar */}
                 <Route path="/player" element={<PlayerPage />} />
+                <Route path="/pdf" element={<PDFPage />} />
 
                 {/* Main app with tab bar */}
                 <Route path="*" element={

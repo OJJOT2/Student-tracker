@@ -8,6 +8,8 @@ const api = {
   loadSessionMetadata: (sessionPath) => electron.ipcRenderer.invoke("session:read", sessionPath),
   saveSessionMetadata: (sessionPath, metadata) => electron.ipcRenderer.invoke("session:write", sessionPath, metadata),
   // Media
-  getMediaPath: (filePath) => electron.ipcRenderer.invoke("media:path", filePath)
+  getMediaPath: (filePath) => electron.ipcRenderer.invoke("media:path", filePath),
+  // File reading (for PDFs)
+  readFile: (filePath) => electron.ipcRenderer.invoke("file:read", filePath)
 };
 electron.contextBridge.exposeInMainWorld("api", api);
