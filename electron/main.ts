@@ -159,6 +159,17 @@ ipcMain.handle('file:read', async (_, filePath: string) => {
     }
 })
 
+// Write file from buffer (for saving PDFs)
+ipcMain.handle('file:write', async (_, filePath: string, data: ArrayBuffer) => {
+    try {
+        await fs.writeFile(filePath, Buffer.from(data))
+        return true
+    } catch (err) {
+        console.error('Failed to write file:', filePath, err)
+        throw err
+    }
+})
+
 // ============= DIRECTORY SCANNER =============
 
 async function scanDirectory(dirPath: string): Promise<FolderNode> {

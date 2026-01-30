@@ -146,3 +146,54 @@ function findSessionNode(node: FolderNode | null, path: string): FolderNode | nu
 
     return null
 }
+
+// ------------------------------------------------------------------
+// Analytics Helpers (Stage 10)
+// ------------------------------------------------------------------
+
+export const getSessionAnalytics = () => {
+    const { folderTree } = useSessionStore.getState()
+    const allSessions: Session[] = []
+
+    // Recursive helper to collect all sessions
+    const collectSessions = (node: FolderNode) => {
+        if (node.type === 'session' && node.session) {
+            allSessions.push({
+                ...node.session,
+                path: node.path,
+                videoFiles: node.session.videos ? Object.keys(node.session.videos) : [], // Reconstruct from metadata if needed, though session extraction logic in selectSession is better. 
+                // However, for stats, we might relying on what's in the tree. 
+                // The Session type in useSessionStore expects full Session object but tree has SessionMetadata.
+                // We'll map minimally enough for stats.
+                pdfFiles: [],
+                progress: node.session.progress || 0
+            } as any as Session)
+        }
+        if (node.children) {
+            node.children.forEach(collectSessions)
+        }
+    }
+
+    if (folderTree) {
+        collectSessions(folderTree)
+    }
+
+    // Sort by last accessed
+    const recentSessions = [...allSessions].sort((a, b) => {
+        const timeA = new Date(a.lastAccessedAt || 0).getTime()
+        const timeB = new Date(b.lastAccessedAt || 0).getTime()
+        return timeB - timeA
+    })
+
+    const totalWatchTime = allSessions.reduce((acc, s) => acc + (s.totalWatchTime || 0), 0)
+    const completedSessions = allSessions.filter(s => s.status === 'completed').length
+    const inProgressSessions = allSessions.filter(s => s.status === 'started').length // Assuming 'started' is the status for in-progress
+
+    return {
+        totalSessions: allSessions.length,
+        totalWatchTime,
+        completedSessions,
+        inProgressSessions,
+        recentSessions: recentSessions.slice(0, 5) // Top 5
+    }
+}

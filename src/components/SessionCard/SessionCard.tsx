@@ -155,6 +155,15 @@ export function SessionCard({ session }: SessionCardProps) {
                 </button>
                 <button
                     className="btn btn-secondary"
+                    onClick={() => {
+                        handleStartSession()
+                        navigate('/study')
+                    }}
+                >
+                    📑 Split View
+                </button>
+                <button
+                    className="btn btn-secondary"
                     onClick={() => setIsEditModalOpen(true)}
                 >
                     📝 Edit Details

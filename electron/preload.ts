@@ -66,7 +66,11 @@ const api = {
 
     // File reading (for PDFs)
     readFile: (filePath: string): Promise<ArrayBuffer> =>
-        ipcRenderer.invoke('file:read', filePath)
+        ipcRenderer.invoke('file:read', filePath),
+
+    // File writing (for saving PDFs)
+    writeFile: (filePath: string, data: ArrayBuffer): Promise<boolean> =>
+        ipcRenderer.invoke('file:write', filePath, data)
 }
 
 contextBridge.exposeInMainWorld('api', api)

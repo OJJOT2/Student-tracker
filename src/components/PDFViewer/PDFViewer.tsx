@@ -4,6 +4,7 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css'
 import 'react-pdf/dist/esm/Page/TextLayer.css'
 import { AnnotationLayer } from './AnnotationLayer'
 import { PDFToolbar } from './PDFToolbar'
+import { ResizableImage } from './ResizableImage'
 import './PDFViewer.css'
 
 // Set up PDF.js worker - use local worker from node_modules
@@ -24,11 +25,23 @@ export interface Stroke {
     page: number
 }
 
+export interface ImageAnnotation {
+    id: string
+    x: number
+    y: number
+    width: number
+    height: number
+    data: ArrayBuffer
+    mimeType: 'image/png' | 'image/jpeg'
+    page: number
+}
+
 interface PDFViewerProps {
     data: ArrayBuffer
     title?: string
-    onSave?: (annotations: Record<number, Stroke[]>) => void
+    onSave?: (annotations: Record<number, Stroke[]>, images: Record<number, ImageAnnotation[]>, items: { pageWidth: number }) => void
     initialAnnotations?: Record<number, Stroke[]>
+    initialImages?: Record<number, ImageAnnotation[]>
 }
 
 // Component for a single PDF page with annotation layer
@@ -41,9 +54,13 @@ interface PDFPageWithAnnotationsProps {
     color: string
     size: number
     strokes: Stroke[]
+    images: ImageAnnotation[]
+    selectedImageId: string | null
     onAddStroke: (stroke: Stroke) => void
     onEraseStroke: (strokeId: string) => void
     onUpdateStrokes: (strokes: Stroke[]) => void
+    onImageSelect: (id: string) => void
+    onImageUpdate: (id: string, updates: { x: number; y: number; width: number; height: number }) => void
     isVisible: boolean
 }
 
@@ -56,9 +73,13 @@ function PDFPageWithAnnotations({
     color,
     size,
     strokes,
+    images,
+    selectedImageId,
     onAddStroke,
     onEraseStroke,
     onUpdateStrokes,
+    onImageSelect,
+    onImageUpdate,
     isVisible
 }: PDFPageWithAnnotationsProps) {
     const pageRef = useRef<HTMLDivElement>(null)
@@ -102,6 +123,10 @@ function PDFPageWithAnnotations({
                 ref={pageRef}
                 className="pdf-page-item"
                 style={{ transformOrigin: 'top left' }}
+                onPointerDown={() => {
+                    // Deselect image if clicking on empty space (but not if tool is select?)
+                    if (selectedImageId) onImageSelect('')
+                }}
             >
                 <Page
                     pageNumber={pageNumber}
@@ -110,6 +135,44 @@ function PDFPageWithAnnotations({
                     renderAnnotationLayer={true}
                     onLoadSuccess={handlePageLoad}
                 />
+
+                {/* Images Layer */}
+                {/* Images Layer - z-index 15 to be above PDF but below Annotations (z-index 10?? AnnotationLayer is z-index 10 in CSS) */}
+                {/* Actually, if we want images to be interactive, they must be above AnnotationLayer when in Select mode, or AnnotationLayer must be pointer-events: none */}
+                <div className="pdf-images-layer" style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    pointerEvents: 'none', // Allow children (images) to catch events
+                    zIndex: tool === 'select' ? 20 : 5 // Above annotations when selecting, below when drawing?
+                }}>
+                    {images.map(img => {
+                        // Create object URL for the image data
+                        // Note: In production we should revoke these URLs
+                        const blob = new Blob([img.data], { type: img.mimeType })
+                        const url = URL.createObjectURL(blob)
+
+                        return (
+                            <ResizableImage
+                                key={img.id}
+                                id={img.id}
+                                src={url}
+                                x={img.x}
+                                y={img.y}
+                                width={img.width}
+                                height={img.height}
+                                scale={scale}
+                                isSelected={selectedImageId === img.id}
+                                onSelect={onImageSelect}
+                                onChange={onImageUpdate}
+                                pointerEvents={tool === 'select' ? 'auto' : 'none'}
+                            />
+                        )
+                    })}
+                </div>
+
                 <AnnotationLayer
                     width={pageWidth * scale}
                     height={pageHeight * scale}
@@ -129,7 +192,7 @@ function PDFPageWithAnnotations({
     )
 }
 
-export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFViewerProps) {
+export function PDFViewer({ data, title, onSave, initialAnnotations = {}, initialImages = {} }: PDFViewerProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const scrollContainerRef = useRef<HTMLDivElement>(null)
     const [numPages, setNumPages] = useState(0)
@@ -149,6 +212,11 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
 
     // Annotations per page
     const [annotations, setAnnotations] = useState<Record<number, Stroke[]>>(initialAnnotations)
+    const [images, setImages] = useState<Record<number, ImageAnnotation[]>>(initialImages)
+    const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
+
+    // History (combined for simplicity, though ideally separate)
+    // For now, only undo/redo strokes. Images actions won't be in history to keep it simple first.
     const [history, setHistory] = useState<Array<Record<number, Stroke[]>>>([initialAnnotations])
     const [historyIndex, setHistoryIndex] = useState(0)
 
@@ -163,12 +231,23 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
         return { data: clonedData }
     }, [data])
 
-    // Calculate fit width on mount
+    // Calculate fit width on mount and resize
     useEffect(() => {
-        if (containerRef.current) {
-            const containerWidth = containerRef.current.clientWidth - 80
-            setPageWidth(containerWidth)
+        if (!containerRef.current) return
+
+        const updateWidth = () => {
+            if (containerRef.current) {
+                const containerWidth = containerRef.current.clientWidth - 40 // Reduced padding
+                setPageWidth(containerWidth)
+            }
         }
+
+        updateWidth()
+
+        const observer = new ResizeObserver(updateWidth)
+        observer.observe(containerRef.current)
+
+        return () => observer.disconnect()
     }, [])
 
     // Handle document load
@@ -226,9 +305,10 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
         if (!scrollContainer) return
 
         const handleScroll = () => {
-            const scrollLeft = scrollContainer.scrollLeft
-            const pageWidthWithGap = (pageWidth * scale) + 20 // 20px gap
-            const currentPageNum = Math.floor(scrollLeft / pageWidthWithGap) + 1
+            const scrollTop = scrollContainer.scrollTop
+            // Estimate page height (assuming A4 aspect ratio 1.414) plus gap
+            const pageHeightWithGap = (pageWidth * scale * 1.414) + 20
+            const currentPageNum = Math.floor(scrollTop / pageHeightWithGap) + 1
             if (currentPageNum !== currentPage && currentPageNum > 0 && currentPageNum <= numPages) {
                 setCurrentPage(currentPageNum)
             }
@@ -245,9 +325,9 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
 
         // Scroll to page
         if (scrollContainerRef.current) {
-            const pageWidthWithGap = (pageWidth * scale) + 20
+            const pageHeightWithGap = (pageWidth * scale * 1.414) + 20
             scrollContainerRef.current.scrollTo({
-                left: (targetPage - 1) * pageWidthWithGap,
+                top: (targetPage - 1) * pageHeightWithGap,
                 behavior: 'smooth'
             })
         }
@@ -334,10 +414,80 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
         }
     }, [historyIndex, history])
 
+    // Image handlers
+    const handleImageUpdate = useCallback((id: string, updates: { x: number; y: number; width: number; height: number }) => {
+        setImages(prev => {
+            const newImages = { ...prev }
+
+            // Find in all pages
+            for (const pageNumStr of Object.keys(newImages)) {
+                const pageNum = parseInt(pageNumStr)
+                const pageImages = newImages[pageNum] || []
+                const imgIndex = pageImages.findIndex(img => img.id === id)
+
+                if (imgIndex !== -1) {
+                    const updatedImages = [...pageImages]
+                    updatedImages[imgIndex] = {
+                        ...updatedImages[imgIndex],
+                        ...updates
+                    }
+                    newImages[pageNum] = updatedImages
+                    // We found it, no need to check other pages
+                    // Assuming ID is unique across all pages
+                    return newImages
+                }
+            }
+            return newImages
+        })
+    }, [])
+
+    // Add image handler
+    const handleAddImage = useCallback(async (file: File) => {
+        // ... same content as before ...
+        try {
+            const buffer = await file.arrayBuffer()
+            const id = crypto.randomUUID()
+
+            // Default placement centered (or top-left with offset)
+            // Ideally we'd measure image dimensions first. 
+            // For now, default to 200px width, aspect ratio maintained?
+            // We can't know aspect ratio without loading it as image first.
+            // Let's create an ObjectURL to measure it.
+            const url = URL.createObjectURL(file)
+            const img = new Image()
+            img.onload = () => {
+                const aspectRatio = img.width / img.height
+                const defaultWidth = 200
+                const defaultHeight = defaultWidth / aspectRatio
+
+                const newImage: ImageAnnotation = {
+                    id,
+                    x: 100, // Default X
+                    y: 100, // Default Y
+                    width: defaultWidth, // Unscaled units
+                    height: defaultHeight, // Unscaled units
+                    data: buffer,
+                    mimeType: file.type as 'image/png' | 'image/jpeg',
+                    page: currentPage
+                }
+
+                setImages(prev => ({
+                    ...prev,
+                    [currentPage]: [...(prev[currentPage] || []), newImage]
+                }))
+
+                URL.revokeObjectURL(url)
+            }
+            img.src = url
+        } catch (err) {
+            console.error('Failed to add image:', err)
+        }
+    }, [currentPage])
+
     // Save
     const handleSave = useCallback(() => {
-        onSave?.(annotations)
-    }, [annotations, onSave])
+        onSave?.(annotations, images, { pageWidth })
+    }, [annotations, images, pageWidth, onSave])
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -464,12 +614,13 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
                 onUndo={undo}
                 onRedo={redo}
                 onSave={handleSave}
+                onInsertImage={handleAddImage}
             />
 
             {/* Title */}
             {title && <div className="pdf-title">{title}</div>}
 
-            {/* PDF Container with horizontal scroll */}
+            {/* PDF Container with vertical scroll */}
             <div className="pdf-container" ref={scrollContainerRef}>
                 {loading && <div className="pdf-loading">Loading PDF...</div>}
                 {error && <div className="pdf-error">Error: {error}</div>}
@@ -480,7 +631,7 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
                     onLoadError={onDocumentLoadError}
                     loading=""
                 >
-                    <div className="pdf-pages-horizontal">
+                    <div className="pdf-pages-vertical">
                         {pageNumbers.map(pageNum => (
                             <PDFPageWithAnnotations
                                 key={pageNum}
@@ -492,9 +643,13 @@ export function PDFViewer({ data, title, onSave, initialAnnotations = {} }: PDFV
                                 color={currentColor}
                                 size={currentSize}
                                 strokes={annotations[pageNum] || []}
+                                images={images[pageNum] || []}
+                                selectedImageId={selectedImageId}
                                 onAddStroke={addStrokeToPage(pageNum)}
                                 onEraseStroke={eraseStrokeFromPage(pageNum)}
                                 onUpdateStrokes={updateStrokesForPage(pageNum)}
+                                onImageSelect={setSelectedImageId}
+                                onImageUpdate={handleImageUpdate}
                                 isVisible={visiblePages.has(pageNum)}
                             />
                         ))}

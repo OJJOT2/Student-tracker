@@ -1,0 +1,48 @@
+.pane-handle {
+    background-color: var(--bg-secondary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    user-select: none;
+    touch-action: none;
+    /* Prevent scrolling while dragging */
+    transition: background-color 0.2s;
+}
+
+.pane-handle:hover,
+.pane-handle:active {
+    background-color: var(--accent-primary);
+}
+
+.pane-handle.horizontal {
+    width: 8px;
+    height: 100%;
+    cursor: col-resize;
+}
+
+.pane-handle.vertical {
+    width: 100%;
+    height: 8px;
+    cursor: row-resize;
+}
+
+.handle-bar {
+    background-color: var(--border-color);
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.pane-handle.horizontal .handle-bar {
+    width: 2px;
+    height: 24px;
+}
+
+.pane-handle.vertical .handle-bar {
+    width: 24px;
+    height: 2px;
+}
+
+.pane-handle:hover .handle-bar {
+    background-color: white;
+}

@@ -1,0 +1,106 @@
+.focus-timer {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(20, 20, 35, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    width: 200px;
+}
+
+.focus-timer.minimized {
+    width: auto;
+    padding: 8px 12px;
+    flex-direction: row;
+    gap: 8px;
+}
+
+.timer-display {
+    font-size: 32px;
+    font-family: monospace;
+    font-weight: bold;
+    color: var(--text-primary);
+    text-shadow: 0 0 10px rgba(74, 144, 226, 0.3);
+}
+
+.minimized .timer-display {
+    font-size: 18px;
+    margin: 0;
+}
+
+.timer-controls {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.timer-btn {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timer-btn.primary {
+    background: var(--accent-gradient);
+    color: white;
+}
+
+.timer-btn.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+}
+
+.timer-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.focus-mode-badge {
+    font-size: 12px;
+    color: var(--accent-primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+}
+
+.toggle-focus-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.toggle-focus-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--text-primary);
+}
+
+.toggle-focus-btn.active {
+    background: rgba(74, 144, 226, 0.15);
+    border-color: rgba(74, 144, 226, 0.3);
+    color: var(--accent-primary);
+}

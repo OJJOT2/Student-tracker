@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import type { DrawingTool, EraserMode } from './PDFViewer'
 import './PDFViewer.css'
 
@@ -31,6 +31,7 @@ interface PDFToolbarProps {
     onUndo: () => void
     onRedo: () => void
     onSave: () => void
+    onInsertImage?: (file: File) => void
 }
 
 const COLORS = ['#000000', '#ff0000', '#0000ff', '#00aa00', '#ff6600', '#9900ff']
@@ -76,9 +77,11 @@ export function PDFToolbar({
     onEraserSizeChange,
     onUndo,
     onRedo,
-    onSave
+    onSave,
+    onInsertImage
 }: PDFToolbarProps) {
     const [showToolOptions, setShowToolOptions] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const getCurrentSize = () => {
         switch (currentTool) {
@@ -95,6 +98,19 @@ export function PDFToolbar({
             case 'highlighter': onHighlighterSizeChange(size); break
             case 'eraser': onEraserSizeChange(size); break
         }
+    }
+
+    const handleImageClick = () => {
+        fileInputRef.current?.click()
+    }
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file && onInsertImage) {
+            onInsertImage(file)
+        }
+        // Reset input
+        if (e.target) e.target.value = ''
     }
 
     const getSizeRange = () => {
@@ -277,6 +293,26 @@ export function PDFToolbar({
                     disabled={!canRedo}
                     title="Redo (Ctrl+Y)"
                 >↪</button>
+
+                <div className="toolbar-separator-sm" />
+
+                {onInsertImage && (
+                    <>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg"
+                            style={{ display: 'none' }}
+                            onChange={handleFileChange}
+                        />
+                        <button
+                            className="toolbar-btn-sm"
+                            onClick={handleImageClick}
+                            title="Insert Image"
+                        >🖼️</button>
+                    </>
+                )}
+
                 <button
                     className="toolbar-btn-sm save-btn-sm"
                     onClick={onSave}

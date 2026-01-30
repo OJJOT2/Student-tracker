@@ -1,0 +1,104 @@
+.split-screen-container {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    background-color: var(--bg-primary);
+}
+
+.split-screen-container.vertical {
+    flex-direction: column;
+}
+
+.split-screen-container.horizontal {
+    flex-direction: row;
+}
+
+.pane {
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure panes don't collapse below a minimum size */
+.pane.left-pane,
+.pane.right-pane {
+    min-width: 100px;
+    min-height: 100px;
+}
+
+.pane-placeholder {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: var(--text-secondary);
+    background-color: var(--bg-secondary);
+}
+
+.pane-empty {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: var(--text-tertiary);
+    background-color: var(--bg-primary);
+}
+
+/* PDF Pane Styles */
+.pdf-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+.pdf-pane-toolbar {
+    height: 48px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    flex-shrink: 0;
+}
+
+.pdf-select {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    max-width: 300px;
+    cursor: pointer;
+}
+
+.pdf-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.pdf-pane-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg-tertiary);
+}
+
+.pdf-loading,
+.pdf-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+}
+
+.pdf-error {
+    color: var(--text-error);
+}

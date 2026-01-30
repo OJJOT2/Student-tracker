@@ -8,5 +8,6 @@ interface Window {
         saveSessionMetadata: (sessionPath: string, metadata: import('./types/session').SessionMetadata) => Promise<boolean>
         getMediaPath: (filePath: string) => Promise<string>
         readFile: (filePath: string) => Promise<ArrayBuffer>
+        writeFile: (filePath: string, data: ArrayBuffer) => Promise<boolean>
     }
 }

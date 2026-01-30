@@ -90,6 +90,15 @@ electron.ipcMain.handle("file:read", async (_, filePath) => {
     throw err;
   }
 });
+electron.ipcMain.handle("file:write", async (_, filePath, data) => {
+  try {
+    await fs.writeFile(filePath, Buffer.from(data));
+    return true;
+  } catch (err) {
+    console.error("Failed to write file:", filePath, err);
+    throw err;
+  }
+});
 async function scanDirectory(dirPath) {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
   const files = entries.filter((e) => e.isFile());

@@ -10,6 +10,8 @@ const api = {
   // Media
   getMediaPath: (filePath) => electron.ipcRenderer.invoke("media:path", filePath),
   // File reading (for PDFs)
-  readFile: (filePath) => electron.ipcRenderer.invoke("file:read", filePath)
+  readFile: (filePath) => electron.ipcRenderer.invoke("file:read", filePath),
+  // File writing (for saving PDFs)
+  writeFile: (filePath, data) => electron.ipcRenderer.invoke("file:write", filePath, data)
 };
 electron.contextBridge.exposeInMainWorld("api", api);
