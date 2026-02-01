@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
-import type { DrawingTool, Stroke, EraserMode } from './PDFViewer'
+import type { DrawingTool, Stroke, EraserMode } from './types'
 import { drawSmoothStroke, drawQuickStroke, eraseArea, drawWhiteOut } from './SmoothPath'
 
 interface AnnotationLayerProps {
@@ -285,7 +285,7 @@ export function AnnotationLayer({
             if (dist < 1) return
         }
 
-        setCurrentStroke(prev => {
+        setCurrentStroke((prev: Stroke | null) => {
             if (!prev) return null
             return {
                 ...prev,

@@ -18,6 +18,10 @@ export interface SessionSummary {
     status: SessionStatus
     progress: number
     totalWatchTime: number
+    lastAccessedAt: string
+    completedAt?: string | null
+    customName?: string | null
+    description?: string
 }
 
 // Full session metadata (from session.meta.json)
@@ -36,11 +40,13 @@ export interface SessionMetadata {
     createdAt: string
     lastAccessedAt: string
     completedAt: string | null
+    completedManually?: boolean
 }
 
 // Video progress tracking
 export interface VideoProgress {
     watchTime: number
+    duration?: number
     lastPosition: number
     completed: boolean
     playCount: number

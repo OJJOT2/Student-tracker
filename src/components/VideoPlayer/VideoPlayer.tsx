@@ -1,4 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
+import { useFocusStore } from '../../stores/focusStore'
+import { FocusTimer } from '../FocusMode/FocusTimer'
 import type { TimestampMark } from '../../types/session'
 import { MarksOverlay } from './MarksOverlay'
 import { MarksPanel } from './MarksPanel'
@@ -177,16 +179,12 @@ export function VideoPlayer({
 
     // Show controls temporarily
     const showControlsTemporarily = useCallback(() => {
+        if (isPlaying) return
+
         setShowControls(true)
 
         if (hideControlsTimeout.current) {
             clearTimeout(hideControlsTimeout.current)
-        }
-
-        if (isPlaying) {
-            hideControlsTimeout.current = window.setTimeout(() => {
-                setShowControls(false)
-            }, 3000)
         }
     }, [isPlaying])
 
@@ -367,13 +365,50 @@ export function VideoPlayer({
         return () => document.removeEventListener('keydown', handleKeyDown)
     }, [togglePlay, skip, toggleMute, toggleFullscreen, handleAddMark, moveFrame, zoomFrame, resetTransform, playbackRate, changePlaybackRate])
 
+    // Focus Mode Integration
+    const {
+        isFocusMode,
+        activeMode,
+        focusStatus,
+        breakTimeLeft,
+        setFocusStatus,
+        toggleFocusMode,
+        setMode
+    } = useFocusStore()
+
     // Video event handlers
     useEffect(() => {
         const video = videoRef.current
         if (!video) return
 
-        const handlePlay = () => setIsPlaying(true)
-        const handlePause = () => setIsPlaying(false)
+        const handlePlay = () => {
+            setIsPlaying(true)
+            setShowControls(false)
+
+            // Focus Mode Logic: Play = Study
+            if (isFocusMode && activeMode === 'session') {
+                setFocusStatus('study')
+            }
+        }
+
+        const handlePause = () => {
+            // Focus Mode Logic: Pause = Break (unless forced)
+            if (isFocusMode && activeMode === 'session') {
+                // If break time is out, prevent pause (or immediately play)
+                if (breakTimeLeft <= 0) {
+                    console.log("No break time left! Forced focus.")
+                    // We can't easily "prevent" the pause event, but we can force play again immediately
+                    // However, better UX might be to just immediately call play()
+                    video.play().catch(e => console.error(e))
+                    return
+                }
+                setFocusStatus('break')
+            }
+
+            setIsPlaying(false)
+            setShowControls(true)
+        }
+
         const handleTimeUpdate = () => {
             const time = video.currentTime
             setCurrentTime(time)
@@ -410,12 +445,11 @@ export function VideoPlayer({
         video.addEventListener('progress', handleProgress)
         document.addEventListener('fullscreenchange', handleFullscreenChange)
 
-        // Set initial position
-        if (initialPosition > 0) {
-            video.currentTime = initialPosition
-        }
+        video.addEventListener('progress', handleProgress)
+        document.addEventListener('fullscreenchange', handleFullscreenChange)
 
         return () => {
+
             video.removeEventListener('play', handlePlay)
             video.removeEventListener('pause', handlePause)
             video.removeEventListener('timeupdate', handleTimeUpdate)
@@ -427,7 +461,28 @@ export function VideoPlayer({
             // Report final watch time
             onProgress?.(watchedTimeRef.current)
         }
-    }, [initialPosition, onTimeUpdate, onEnded, onProgress])
+    }, [onTimeUpdate, onEnded, onProgress, isFocusMode, activeMode, breakTimeLeft, setFocusStatus])
+
+    // Handle Initial Position and Source Changes
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video) return
+
+        if (initialPosition > 0) {
+            video.currentTime = initialPosition
+        }
+    }, [src, initialPosition])
+
+    // Auto-Resume if break time ends while paused
+    useEffect(() => {
+        if (isFocusMode && activeMode === 'session' && focusStatus === 'break' && breakTimeLeft <= 0) {
+            // Break is over! Resume video.
+            if (videoRef.current && videoRef.current.paused) {
+                videoRef.current.play().catch(e => console.error("Force play error", e))
+            }
+        }
+    }, [breakTimeLeft, isFocusMode, activeMode, focusStatus])
+
 
     // Update volume when state changes
     useEffect(() => {
@@ -602,6 +657,24 @@ export function VideoPlayer({
                         <button className="control-btn" onClick={toggleFullscreen}>
                             {isFullscreen ? '⛶' : '⛶'}
                         </button>
+
+                        <div className="separator" style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)', margin: '0 4px' }}></div>
+
+                        <button
+                            className={`control-btn ${isFocusMode && activeMode === 'session' ? 'active-focus' : ''}`}
+                            onClick={() => {
+                                if (isFocusMode && activeMode === 'session') {
+                                    toggleFocusMode()
+                                } else {
+                                    setMode('session')
+                                    if (!isFocusMode) toggleFocusMode()
+                                }
+                            }}
+                            title={isFocusMode ? "Disable Focus Mode" : "Enable Focus Mode"}
+                            style={{ color: isFocusMode && activeMode === 'session' ? '#4a90e2' : 'white' }}
+                        >
+                            {isFocusMode && activeMode === 'session' ? '🧠 ON' : '🧠'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -623,6 +696,8 @@ export function VideoPlayer({
                     }}
                 />
             )}
+            {/* Focus Timer Overlay */}
+            <FocusTimer />
         </div>
     )
 }

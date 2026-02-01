@@ -132,17 +132,37 @@
     opacity: 0.7;
 }
 
-.item-index {
+.item-check-btn {
     width: 28px;
     height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: rgba(255, 255, 255, 0.1);
+    border: 1px solid transparent;
     border-radius: 50%;
     font-size: 12px;
     font-weight: 600;
     color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.item-check-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.playlist-item.completed .item-check-btn {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.item-number {
+    font-weight: 600;
 }
 
 .playlist-item.completed .item-index {
@@ -162,6 +182,13 @@
     background: rgba(102, 126, 234, 0.2);
     padding: 4px 10px;
     border-radius: 20px;
+}
+
+.item-duration {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    margin-left: 8px;
+    font-weight: normal;
 }
 
 .item-play {
@@ -228,4 +255,30 @@
 
 .card-actions .btn {
     flex: 1;
+}
+
+.card-schedule-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-outline {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-outline:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: var(--bg-hover);
 }

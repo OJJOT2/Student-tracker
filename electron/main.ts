@@ -45,6 +45,10 @@ interface FolderNode {
         status: 'untouched' | 'started' | 'completed'
         progress: number
         totalWatchTime: number
+        lastAccessedAt: string
+        completedAt: string | null
+        customName: string | null
+        description: string
     }
 }
 
@@ -63,7 +67,11 @@ function createWindow() {
         },
         titleBarStyle: 'hiddenInset',
         show: false,
+        autoHideMenuBar: true,
+        icon: path.join(__dirname, '../src/icon.png')
     })
+
+    mainWindow.setMenu(null)
 
     // Register custom protocol for local files
     protocol.registerFileProtocol('media', (request, callback) => {
@@ -170,6 +178,23 @@ ipcMain.handle('file:write', async (_, filePath: string, data: ArrayBuffer) => {
     }
 })
 
+// Toggle Focus Mode (Always on Top / Kiosk)
+ipcMain.handle('app:focus-mode', async (_, enabled: boolean) => {
+    if (!mainWindow) return
+
+    // On Windows, setFullScreen alone might suffice for kiosk-like feel
+    // But setAlwaysOnTop ensures it stays there
+
+    if (enabled) {
+        mainWindow.setFullScreen(true)
+        mainWindow.setAlwaysOnTop(true, 'screen-saver') // 'screen-saver' level is very high
+    } else {
+        mainWindow.setAlwaysOnTop(false)
+        mainWindow.setFullScreen(false)
+    }
+    return true
+})
+
 // ============= DIRECTORY SCANNER =============
 
 async function scanDirectory(dirPath: string): Promise<FolderNode> {
@@ -206,7 +231,11 @@ async function scanDirectory(dirPath: string): Promise<FolderNode> {
                 pdfs: pdfFiles,
                 status: metadata.status,
                 progress,
-                totalWatchTime: metadata.totalWatchTime
+                totalWatchTime: metadata.totalWatchTime,
+                lastAccessedAt: metadata.lastAccessedAt,
+                completedAt: metadata.completedAt,
+                customName: metadata.customName,
+                description: metadata.description
             }
         }
     }

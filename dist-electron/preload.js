@@ -12,6 +12,8 @@ const api = {
   // File reading (for PDFs)
   readFile: (filePath) => electron.ipcRenderer.invoke("file:read", filePath),
   // File writing (for saving PDFs)
-  writeFile: (filePath, data) => electron.ipcRenderer.invoke("file:write", filePath, data)
+  writeFile: (filePath, data) => electron.ipcRenderer.invoke("file:write", filePath, data),
+  // Focus Mode
+  setFocusMode: (enabled) => electron.ipcRenderer.invoke("app:focus-mode", enabled)
 };
 electron.contextBridge.exposeInMainWorld("api", api);

@@ -1,5 +1,5 @@
 import { PDFDocument, rgb } from 'pdf-lib'
-import { Stroke, ImageAnnotation } from '../components/PDFViewer/PDFViewer'
+import type { Stroke, ImageAnnotation } from '../components/PDFViewer/types'
 
 
 
@@ -76,7 +76,7 @@ export async function saveAnnotationsToPDF(
             }
 
             // Scale points
-            const scaledPoints = stroke.points.map(p => ({
+            const scaledPoints = stroke.points.map((p: { x: number; y: number; pressure: number }) => ({
                 x: p.x * scaleRatio,
                 y: p.y * scaleRatio
             }))

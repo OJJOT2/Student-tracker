@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import type { DrawingTool, EraserMode } from './PDFViewer'
+import type { DrawingTool, EraserMode } from './types'
 import './PDFViewer.css'
 
 interface PDFToolbarProps {

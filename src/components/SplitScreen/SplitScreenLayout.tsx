@@ -1,12 +1,14 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useLayoutStore, PaneType } from '../../stores/layoutStore'
 import { PaneHandle } from './PaneHandle'
 import { VideoPlayer } from '../VideoPlayer/VideoPlayer'
-import { PDFViewer, ImageAnnotation, Stroke } from '../PDFViewer/PDFViewer'
+import { PDFViewer } from '../PDFViewer/PDFViewer'
+import type { ImageAnnotation, Stroke } from '../PDFViewer/types'
 import { FocusToggle } from '../FocusMode/FocusToggle'
 import { usePlayerStore } from '../../stores/playerStore'
 import { useSessionStore } from '../../stores/sessionStore'
-import type { TimestampMark } from '../../types/session'
+
 import './SplitScreen.css'
 
 export function SplitScreenLayout() {
@@ -20,6 +22,7 @@ export function SplitScreenLayout() {
 
     const containerRef = useRef<HTMLDivElement>(null)
     const isDragging = useRef(false)
+    const navigate = useNavigate()
 
     const handlePointerDown = (e: React.PointerEvent) => {
         isDragging.current = true
@@ -81,8 +84,27 @@ export function SplitScreenLayout() {
             ref={containerRef}
             className={`split-screen-container ${isVertical ? 'vertical' : 'horizontal'}`}
         >
-            <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 100 }}>
+            <div className="split-screen-controls" style={{ position: 'absolute', top: 10, right: 10, zIndex: 100, display: 'flex', gap: '8px' }}>
                 <FocusToggle />
+                <button
+                    className="close-split-btn"
+                    onClick={() => navigate('/dashboard')}
+                    title="Close Split View"
+                    style={{
+                        background: 'rgba(0,0,0,0.5)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        color: 'white',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}
+                >
+                    ✕
+                </button>
             </div>
 
             <div
@@ -131,15 +153,45 @@ function VideoPane() {
     }, [currentSession, currentVideoFile])
 
     // Handlers (Simplified from PlayerPage)
+    // Handlers
+    const lastSaveTime = useRef(0)
+
+    // Sync playerStore with sessionStore updates to avoid stale state
+    useEffect(() => {
+        const unsub = useSessionStore.subscribe((state) => {
+            if (state.selectedSession && state.selectedSession.id === currentSession?.id) {
+                // If sessionStore updated, we might want to sync playerStore?
+                // Actually, let's just make sure we save correct data.
+            }
+        })
+        return unsub
+    }, [currentSession])
+
     const handleTimeUpdate = useCallback(async (currentTime: number, duration: number) => {
         if (!currentSession || !currentVideoFile) return
 
-        // Save every 5s logic
-        if (Math.floor(currentTime) % 5 === 0 && duration > 0) {
-            const progress = currentSession.videos[currentVideoFile] || {
-                watchTime: 0, lastPosition: 0, completed: false, playCount: 0
-            }
-            const isCompleted = currentTime / duration >= 0.9
+        // 1. Update PlayerStore local state immediately (so UI/logic reflects reality)
+        const progress = currentSession.videos[currentVideoFile] || {
+            watchTime: 0, lastPosition: 0, completed: false, playCount: 0
+        }
+
+        // Calculate completion
+        const isCompleted = currentTime / duration >= 0.9
+        const newCompleted = isCompleted || progress.completed
+
+        // Optimize: Only dispatch if meaningful change? 
+        // For lastPosition, it changes every tick.
+        // We probably don't want to re-render everything every 250ms if we can avoid it.
+        // But we need `currentSession` to be fresh for the NEXT save calculation.
+
+        // 2. Persist to Disk (Throttle: every 5 seconds)
+        const now = Date.now()
+        if (now - lastSaveTime.current > 5000 && duration > 0) {
+            lastSaveTime.current = now
+
+            // Use functional update or get fresh state if possible, but here we invoke store action
+            // We use the LATEST known accumulated data from local state if we were tracking it, 
+            // but for 'lastPosition' simple override is fine.
 
             await updateSessionMetadata({
                 videos: {
@@ -147,9 +199,17 @@ function VideoPane() {
                     [currentVideoFile]: {
                         ...progress,
                         lastPosition: currentTime,
-                        completed: isCompleted || progress.completed
+                        completed: newCompleted
                     }
-                }
+                },
+                lastAccessedAt: new Date().toISOString()
+            })
+
+            // Also update player store locally so 'currentSession' reflects this save in next render
+            // This prevents stale closures in other handlers
+            usePlayerStore.getState().updateVideoProgress(currentVideoFile, {
+                lastPosition: currentTime,
+                completed: newCompleted
             })
         }
     }, [currentSession, currentVideoFile, updateSessionMetadata])
@@ -157,20 +217,26 @@ function VideoPane() {
     const handleEnded = useCallback(async () => {
         if (!currentSession || !currentVideoFile) return
 
-        const progress = currentSession.videos[currentVideoFile] || {
-            watchTime: 0, lastPosition: 0, completed: false, playCount: 0
-        }
+        // Update stores
+        usePlayerStore.getState().updateVideoProgress(currentVideoFile, {
+            completed: true,
+            lastPosition: 0,
+            playCount: (currentSession.videos[currentVideoFile]?.playCount || 0) + 1
+        })
 
         await updateSessionMetadata({
             videos: {
                 ...currentSession.videos,
+                // Refetch fresh currentSession from playerStore to be safe? 
+                // We just updated it above.
                 [currentVideoFile]: {
-                    ...progress,
+                    ...currentSession.videos[currentVideoFile],
                     completed: true,
-                    playCount: progress.playCount + 1,
+                    playCount: (currentSession.videos[currentVideoFile]?.playCount || 0) + 1,
                     lastPosition: 0
                 }
-            }
+            },
+            lastAccessedAt: new Date().toISOString()
         })
 
         if (currentSession && currentVideoIndex < currentSession.videoFiles.length - 1) {
@@ -179,19 +245,27 @@ function VideoPane() {
     }, [currentSession, currentVideoFile, currentVideoIndex, updateSessionMetadata, playNext])
 
     const handleSaveMarks = useCallback(async () => {
-        const { currentSession: session } = usePlayerStore.getState()
-        if (session) {
-            await updateSessionMetadata({ marks: session.marks })
+        // Marks are stored in playerStore, need to sync to sessionStore
+        const { currentSession: playerSession } = usePlayerStore.getState()
+        if (playerSession) {
+            await updateSessionMetadata({
+                marks: playerSession.marks,
+                lastAccessedAt: new Date().toISOString()
+            })
         }
     }, [updateSessionMetadata])
 
+    // Accumulate watch time
     const handleProgress = useCallback(async (watchedTime: number) => {
-        if (currentSession && watchedTime > 0) {
+        // Get FRESH session from store to avoid stale closure (watchTime accumulation bug)
+        const { selectedSession } = useSessionStore.getState()
+
+        if (selectedSession && watchedTime > 0) {
             await updateSessionMetadata({
-                totalWatchTime: currentSession.totalWatchTime + watchedTime
+                totalWatchTime: (selectedSession.totalWatchTime || 0) + watchedTime
             })
         }
-    }, [currentSession, updateSessionMetadata])
+    }, [updateSessionMetadata])
 
     if (!currentSession || !currentVideoFile) {
         return <div className="pane-placeholder">No video selected</div>

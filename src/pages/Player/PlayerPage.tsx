@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { VideoPlayer } from '../../components/VideoPlayer/VideoPlayer'
 import { usePlayerStore } from '../../stores/playerStore'
 import { useSessionStore } from '../../stores/sessionStore'
+import { useGoalStore } from '../../stores/goalStore'
 import type { TimestampMark } from '../../types/session'
 import './PlayerPage.css'
 
@@ -56,6 +57,7 @@ export function PlayerPage() {
                     [currentVideoFile]: {
                         ...progress,
                         lastPosition: currentTime,
+                        duration: duration,
                         completed: isCompleted || progress.completed
                     }
                 }
@@ -97,6 +99,8 @@ export function PlayerPage() {
             await updateSessionMetadata({
                 totalWatchTime: currentSession.totalWatchTime + watchedTime
             })
+            // Update goals
+            useGoalStore.getState().addStudyTime(watchedTime)
         }
     }, [currentSession, updateSessionMetadata])
 

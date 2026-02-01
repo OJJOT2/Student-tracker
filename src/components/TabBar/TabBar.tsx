@@ -28,12 +28,39 @@ export function TabBar() {
                     <span className="tab-icon">📊</span>
                     <span className="tab-label">Dashboard</span>
                 </NavLink>
+
+                <NavLink
+                    to="/tasks"
+                    className={({ isActive }) => `tab-item ${isActive ? 'active' : ''}`}
+                >
+                    <span className="tab-icon">✅</span>
+                    <span className="tab-label">Tasks</span>
+                </NavLink>
+
+                <NavLink
+                    to="/goals"
+                    className={({ isActive }) => `tab-item ${isActive ? 'active' : ''}`}
+                >
+                    <span className="tab-icon">🏆</span>
+                    <span className="tab-label">Goals</span>
+                </NavLink>
+
+                <NavLink
+                    to="/calendar"
+                    className={({ isActive }) => `tab-item ${isActive ? 'active' : ''}`}
+                >
+                    <span className="tab-icon">📅</span>
+                    <span className="tab-label">Calendar</span>
+                </NavLink>
             </div>
 
             <div className="tab-bar-right">
-                <button className="settings-btn">
+                <NavLink
+                    to="/settings"
+                    className={({ isActive }) => `settings-btn ${isActive ? 'active' : ''}`}
+                >
                     <span>⚙️</span>
-                </button>
+                </NavLink>
             </div>
         </nav>
     )

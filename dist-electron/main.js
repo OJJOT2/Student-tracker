@@ -16,8 +16,11 @@ function createWindow() {
       nodeIntegration: false
     },
     titleBarStyle: "hiddenInset",
-    show: false
+    show: false,
+    autoHideMenuBar: true,
+    icon: path.join(__dirname, "../src/icon.png")
   });
+  mainWindow.setMenu(null);
   electron.protocol.registerFileProtocol("media", (request, callback) => {
     const filePath = decodeURIComponent(request.url.replace("media://", ""));
     callback({ path: filePath });
@@ -99,6 +102,17 @@ electron.ipcMain.handle("file:write", async (_, filePath, data) => {
     throw err;
   }
 });
+electron.ipcMain.handle("app:focus-mode", async (_, enabled) => {
+  if (!mainWindow) return;
+  if (enabled) {
+    mainWindow.setFullScreen(true);
+    mainWindow.setAlwaysOnTop(true, "screen-saver");
+  } else {
+    mainWindow.setAlwaysOnTop(false);
+    mainWindow.setFullScreen(false);
+  }
+  return true;
+});
 async function scanDirectory(dirPath) {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
   const files = entries.filter((e) => e.isFile());
@@ -120,7 +134,11 @@ async function scanDirectory(dirPath) {
         pdfs: pdfFiles,
         status: metadata.status,
         progress,
-        totalWatchTime: metadata.totalWatchTime
+        totalWatchTime: metadata.totalWatchTime,
+        lastAccessedAt: metadata.lastAccessedAt,
+        completedAt: metadata.completedAt,
+        customName: metadata.customName,
+        description: metadata.description
       }
     };
   }

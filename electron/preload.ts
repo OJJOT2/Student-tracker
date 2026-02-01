@@ -70,7 +70,11 @@ const api = {
 
     // File writing (for saving PDFs)
     writeFile: (filePath: string, data: ArrayBuffer): Promise<boolean> =>
-        ipcRenderer.invoke('file:write', filePath, data)
+        ipcRenderer.invoke('file:write', filePath, data),
+
+    // Focus Mode
+    setFocusMode: (enabled: boolean): Promise<boolean> =>
+        ipcRenderer.invoke('app:focus-mode', enabled)
 }
 
 contextBridge.exposeInMainWorld('api', api)

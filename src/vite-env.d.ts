@@ -9,5 +9,6 @@ interface Window {
         getMediaPath: (filePath: string) => Promise<string>
         readFile: (filePath: string) => Promise<ArrayBuffer>
         writeFile: (filePath: string, data: ArrayBuffer) => Promise<boolean>
+        setFocusMode: (enabled: boolean) => Promise<boolean>
     }
 }

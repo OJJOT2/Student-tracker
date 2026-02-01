@@ -3,20 +3,65 @@ import { useSessionStore } from '../../stores/sessionStore'
 import type { FolderNode } from '../../types/session'
 import './FolderTree.css'
 
-export function FolderTree() {
-    const { folderTree, selectedSessionPath, selectSession } = useSessionStore()
+export interface FolderTreeProps {
+    filter?: 'all' | 'completed' | 'in-progress' | 'untouched'
+}
+
+export function FolderTree({ filter = 'all' }: FolderTreeProps) {
+    const { folderTree, selectedSessionPath, selectSession, ignoredPaths } = useSessionStore()
 
     if (!folderTree) return null
 
-    // Debug log
-    console.log('FolderTree rendering:', folderTree)
+    // Recursive function to filter the tree
+    // Returns null if node doesn't match filter AND has no matching children
+    const filterNode = (node: FolderNode): FolderNode | null => {
+        if (node.type === 'session') {
+            // Check if ignored
+            if (ignoredPaths.includes(node.path)) return null
 
-    // If root itself is a session
-    if (folderTree.type === 'session') {
+            const status = node.session?.status || 'untouched'
+
+            if (filter === 'all') return node
+            if (filter === 'completed' && status === 'completed') return node
+            if (filter === 'in-progress' && status === 'started') return node
+            if (filter === 'untouched' && status === 'untouched') return node
+            return null
+        }
+
+        if (node.children) {
+            const filteredChildren = node.children
+                .map(child => filterNode(child))
+                .filter((child): child is FolderNode => child !== null)
+
+            if (filteredChildren.length > 0) {
+                return { ...node, children: filteredChildren }
+            }
+        }
+
+        return null
+    }
+
+    const filteredTree = filterNode(folderTree)
+
+    // Debug log
+    // console.log('FolderTree rendering:', folderTree)
+
+    if (!filteredTree) {
+        return (
+            <div className="folder-tree">
+                <div className="empty-tree-message">
+                    <p>No {filter} sessions found</p>
+                </div>
+            </div>
+        )
+    }
+
+    // If root itself is a session (rare case here as root is usually dir)
+    if (filteredTree.type === 'session') {
         return (
             <div className="folder-tree">
                 <TreeNode
-                    node={folderTree}
+                    node={filteredTree}
                     depth={0}
                     selectedPath={selectedSessionPath}
                     onSelect={selectSession}
@@ -26,12 +71,11 @@ export function FolderTree() {
     }
 
     // If root has no children (empty folder with no sessions)
-    if (!folderTree.children || folderTree.children.length === 0) {
+    if (!filteredTree.children || filteredTree.children.length === 0) {
         return (
             <div className="folder-tree">
                 <div className="empty-tree-message">
-                    <p>📭 No sessions found</p>
-                    <p className="hint">Select a folder containing subfolders with .mp4 files</p>
+                    <p>📭 No sessions found match filters</p>
                 </div>
             </div>
         )
@@ -39,7 +83,7 @@ export function FolderTree() {
 
     return (
         <div className="folder-tree">
-            {folderTree.children.map(node => (
+            {filteredTree.children.map(node => (
                 <TreeNode
                     key={node.path}
                     node={node}

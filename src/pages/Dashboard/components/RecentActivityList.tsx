@@ -37,9 +37,9 @@ export function RecentActivityList({ sessions }: RecentActivityListProps) {
                         {session.status === 'completed' ? '✅' : '📚'}
                     </div>
                     <div className="activity-details">
-                        <h4>{session.customName || session.path.split(/[/\\]/).pop()}</h4>
+                        <h4>{session.customName || (session.path ? session.path.split(/[/\\]/).pop() : 'Unknown Session')}</h4>
                         <span className="activity-time">
-                            Last accessed: {new Date(session.lastAccessedAt).toLocaleDateString()}
+                            Last accessed: {session.lastAccessedAt ? new Date(session.lastAccessedAt).toLocaleDateString() : 'Never'}
                         </span>
                     </div>
                     <div className="activity-progress">

@@ -5,7 +5,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && electron-builder",
+    "build": "tsc && vite build && node scripts/post-build.js && electron-builder",
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "vite build && electron-builder"
@@ -14,8 +14,10 @@
     "pdf-lib": "^1.17.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-intersection-observer": "^10.0.2",
     "react-pdf": "^9.2.1",
     "react-router-dom": "^6.20.0",
+    "recharts": "^3.7.0",
     "uuid": "^9.0.1",
     "zustand": "^4.4.7"
   },
@@ -44,7 +46,8 @@
       "dist-electron/**/*"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "src/icon.png"
     }
   }
 }
