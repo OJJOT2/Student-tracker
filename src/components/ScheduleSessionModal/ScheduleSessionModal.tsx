@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTaskStore } from '../../stores/taskStore'
 import './ScheduleSessionModal.css'
 
 interface ScheduleSessionModalProps {
@@ -11,6 +12,13 @@ interface ScheduleSessionModalProps {
 export function ScheduleSessionModal({ isOpen, onClose, onConfirm, sessionName }: ScheduleSessionModalProps) {
     const [currentDate, setCurrentDate] = useState(new Date())
     const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
+    const { tasks } = useTaskStore()
+
+    // Helper to check for tasks on a date
+    const getTasksForDate = (date: Date) => {
+        const dateStr = date.toISOString().split('T')[0]
+        return tasks.filter(t => t.dueDate && t.dueDate.startsWith(dateStr))
+    }
 
 
 
@@ -79,6 +87,8 @@ export function ScheduleSessionModal({ isOpen, onClose, onConfirm, sessionName }
 
                             const isSelected = selectedDate?.toDateString() === date.toDateString()
                             const isToday = new Date().toDateString() === date.toDateString()
+                            const dayTasks = getTasksForDate(date)
+                            const hasTasks = dayTasks.length > 0
 
                             return (
                                 <div
@@ -87,6 +97,15 @@ export function ScheduleSessionModal({ isOpen, onClose, onConfirm, sessionName }
                                     onClick={() => setSelectedDate(date)}
                                 >
                                     {date.getDate()}
+                                    {hasTasks && <div className="day-events-dot" />}
+
+                                    {hasTasks && (
+                                        <div className="day-tooltip">
+                                            {dayTasks.map(t => (
+                                                <div key={t.id}>• {t.title}</div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )
                         })}

@@ -103,6 +103,72 @@
     justify-content: center;
 }
 
+/* Split Refresh Button */
+.refresh-split-btn {
+    display: flex;
+    width: 100%;
+    position: relative;
+}
+
+.refresh-split-btn .main-refresh {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    flex: 1;
+}
+
+.refresh-split-btn .refresh-dropdown-trigger {
+    width: 36px;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    padding: 0;
+}
+
+.refresh-menu {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    width: 100%;
+    margin-bottom: 8px;
+    background: #1e1e2d;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    z-index: 10;
+    animation: slideUp 0.15s ease-out;
+}
+
+.refresh-menu button {
+    display: flex;
+    width: 100%;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    text-align: left;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.refresh-menu button:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Main Panel */
 .sessions-main {
     flex: 1;

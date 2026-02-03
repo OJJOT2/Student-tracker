@@ -18,12 +18,13 @@ interface PDFViewerProps {
     onSave?: (annotations: Record<number, Stroke[]>, images: Record<number, ImageAnnotation[]>, items: { pageWidth: number }) => void
     initialAnnotations?: Record<number, Stroke[]>
     initialImages?: Record<number, ImageAnnotation[]>
+    onAddPage?: (page: number) => void
 }
 
-function InnerPDFViewer({ data, title, onSave }: PDFViewerProps) {
+function InnerPDFViewer({ data, title, onSave, onAddPage }: PDFViewerProps) {
     const { state, dispatch } = usePDF()
     const containerRef = useRef<HTMLDivElement>(null)
-    const [containerWidth, setContainerWidth] = useState(800)
+    const [containerWidth, setContainerWidth] = useState(window.innerWidth)
 
     // Derived state
     const { numPages, scale, currentPage, tool, eraserMode, penColor, highlighterColor, penSize, highlighterSize, eraserSize, annotations, images } = state
@@ -40,7 +41,7 @@ function InnerPDFViewer({ data, title, onSave }: PDFViewerProps) {
         if (!containerRef.current) return
         const observer = new ResizeObserver(entries => {
             const width = entries[0].contentRect.width
-            if (width > 0) setContainerWidth(width - 48) // Subtract padding
+            if (width > 0) setContainerWidth(width) // Full width, no padding subtraction
         })
         observer.observe(containerRef.current)
         return () => observer.disconnect()
@@ -126,7 +127,13 @@ function InnerPDFViewer({ data, title, onSave }: PDFViewerProps) {
         onEraserSizeChange: (s: number) => dispatch({ type: 'SET_ERASER_SIZE', payload: s }),
         onUndo: () => dispatch({ type: 'UNDO' }),
         onRedo: () => dispatch({ type: 'REDO' }),
-        onSave: () => onSave?.(annotations, images, { pageWidth: containerWidth }),
+        onSave: () => {
+            console.log('=== PDFViewer onSave triggered ===')
+            console.log('annotations:', annotations)
+            console.log('images:', images)
+            console.log('containerWidth:', containerWidth)
+            onSave?.(annotations, images, { pageWidth: containerWidth })
+        },
         onInsertImage: async (file: File) => {
             const buffer = await file.arrayBuffer()
             const id = crypto.randomUUID()
@@ -148,11 +155,12 @@ function InnerPDFViewer({ data, title, onSave }: PDFViewerProps) {
                 URL.revokeObjectURL(url)
             }
             img.src = url
-        }
+        },
+        onAddPage: () => onAddPage?.(state.currentPage)
     }
 
     return (
-        <div className="pdf-viewer-root" tabIndex={0} onKeyDown={(e) => {
+        <div className="pdf-viewer" tabIndex={0} onKeyDown={(e) => {
             // Basic Key Handlers
             if (e.key === 'p') dispatch({ type: 'SET_TOOL', payload: 'pen' })
             if (e.key === 'h') dispatch({ type: 'SET_TOOL', payload: 'highlighter' })
@@ -162,6 +170,10 @@ function InnerPDFViewer({ data, title, onSave }: PDFViewerProps) {
                 e.preventDefault()
                 if (e.shiftKey) dispatch({ type: 'REDO' })
                 else dispatch({ type: 'UNDO' })
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault()
+                onSave?.(annotations, images, { pageWidth: containerWidth })
             }
         }}>
             <div className="pdf-header">
@@ -182,7 +194,7 @@ function InnerPDFViewer({ data, title, onSave }: PDFViewerProps) {
                 />
             </div>
 
-            <div className="pdf-scroll-container" ref={scrollRef}>
+            <div className="pdf-container" ref={scrollRef}>
                 <div ref={containerRef} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Document
                         file={file}

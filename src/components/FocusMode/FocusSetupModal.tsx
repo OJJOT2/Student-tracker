@@ -4,13 +4,14 @@ import '../FocusMode/FocusMode.css' // Reuse focus styles or create new ones? Le
 interface FocusSetupModalProps {
     isOpen: boolean
     onClose: () => void
-    onConfirm: (settings: { enabled: boolean, focusDuration: number, breakDuration: number }) => void
+    onConfirm: (settings: { enabled: boolean, focusDuration: number, breakDuration: number, autoPause: boolean }) => void
 }
 
 export function FocusSetupModal({ isOpen, onClose, onConfirm }: FocusSetupModalProps) {
     const [enabled, setEnabled] = useState(false)
     const [focusDuration, setFocusDuration] = useState(25)
     const [breakDuration, setBreakDuration] = useState(5)
+    const [autoPause, setAutoPause] = useState(true)
 
     if (!isOpen) return null
 
@@ -54,6 +55,16 @@ export function FocusSetupModal({ isOpen, onClose, onConfirm }: FocusSetupModalP
                                     onChange={(e) => setBreakDuration(Number(e.target.value))}
                                 />
                             </div>
+                            <div className="setup-option-sub">
+                                <label className="toggle-label-sub">
+                                    <input
+                                        type="checkbox"
+                                        checked={autoPause}
+                                        onChange={(e) => setAutoPause(e.target.checked)}
+                                    />
+                                    <span>Auto-pause timer when video pauses</span>
+                                </label>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -62,7 +73,7 @@ export function FocusSetupModal({ isOpen, onClose, onConfirm }: FocusSetupModalP
                     <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
                     <button
                         className="btn btn-primary"
-                        onClick={() => onConfirm({ enabled, focusDuration, breakDuration })}
+                        onClick={() => onConfirm({ enabled, focusDuration, breakDuration, autoPause })}
                     >
                         Start Session {enabled ? 'with Focus' : ''} ▶
                     </button>
@@ -128,6 +139,23 @@ export function FocusSetupModal({ isOpen, onClose, onConfirm }: FocusSetupModalP
                 }
                 .fade-in {
                     animation: fadeIn 0.3s ease;
+                }
+                .setup-option-sub {
+                    grid-column: 1 / -1;
+                    margin-top: 10px;
+                }
+                .toggle-label-sub {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                    color: var(--text-secondary);
+                }
+                .toggle-label-sub input {
+                    width: 16px;
+                    height: 16px;
+                    accent-color: var(--accent-primary);
                 }
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(-5px); }

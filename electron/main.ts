@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, protocol } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
 import crypto from 'crypto'
+import { parseFile } from 'music-metadata'
 
 // Types
 interface SessionMetadata {
@@ -17,6 +18,7 @@ interface SessionMetadata {
         lastPosition: number
         completed: boolean
         playCount: number
+        duration?: number
     }>
     marks: Array<{
         id: string
@@ -63,7 +65,8 @@ function createWindow() {
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
-            nodeIntegration: false
+            nodeIntegration: false,
+            webviewTag: true // Enable webview for Browser Mode
         },
         titleBarStyle: 'hiddenInset',
         show: false,
@@ -121,14 +124,25 @@ ipcMain.handle('dir:select', async () => {
 })
 
 // Scan directory for sessions
-ipcMain.handle('dir:scan', async (_, dirPath: string): Promise<FolderNode> => {
-    console.log('Scanning directory:', dirPath)
+ipcMain.handle('dir:scan', async (_, dirPath: string, deepScan: boolean = false): Promise<FolderNode> => {
+    console.log('Scanning directory:', dirPath, deepScan ? '(Deep Scan)' : '')
     try {
-        const result = await scanDirectory(dirPath)
-        console.log('Scan result:', JSON.stringify(result, null, 2))
+        const result = await scanDirectory(dirPath, deepScan)
+        console.log('Scan result: success')
         return result
     } catch (err) {
         console.error('Scan error:', err)
+        throw err
+    }
+})
+
+// Create directory
+ipcMain.handle('dir:create', async (_, dirPath: string) => {
+    try {
+        await fs.mkdir(dirPath, { recursive: true })
+        return true
+    } catch (err) {
+        console.error('Failed to create directory:', err)
         throw err
     }
 })
@@ -197,7 +211,7 @@ ipcMain.handle('app:focus-mode', async (_, enabled: boolean) => {
 
 // ============= DIRECTORY SCANNER =============
 
-async function scanDirectory(dirPath: string): Promise<FolderNode> {
+async function scanDirectory(dirPath: string, deepScan: boolean = false): Promise<FolderNode> {
     const entries = await fs.readdir(dirPath, { withFileTypes: true })
 
     const files = entries.filter(e => e.isFile())
@@ -212,14 +226,35 @@ async function scanDirectory(dirPath: string): Promise<FolderNode> {
 
     // Session detection: has MP4 files
     if (mp4Files.length > 0) {
-        const metadata = await loadOrCreateMetadata(dirPath, mp4Files)
+        const metadata = await loadOrCreateMetadata(dirPath, mp4Files, deepScan)
 
         // Calculate progress
+        let progress = 0
         const videoProgress = Object.values(metadata.videos)
-        const completedCount = videoProgress.filter(v => v.completed).length
-        const progress = mp4Files.length > 0
-            ? Math.round((completedCount / mp4Files.length) * 100)
-            : 0
+
+        let totalTimeWatched = 0
+        let totalDuration = 0
+        let hasDuration = false
+
+        for (const v of videoProgress) {
+            if (v.duration && v.duration > 0) {
+                hasDuration = true
+                totalDuration += v.duration
+                // If completed, count full duration, otherwise last position
+                const effectiveWatch = v.completed ? v.duration : (v.lastPosition || 0)
+                totalTimeWatched += effectiveWatch
+            }
+        }
+
+        if (hasDuration && totalDuration > 0) {
+            progress = Math.min(100, Math.round((totalTimeWatched / totalDuration) * 100))
+        } else {
+            // Fallback to count
+            const completedCount = videoProgress.filter(v => v.completed).length
+            progress = mp4Files.length > 0
+                ? Math.round((completedCount / mp4Files.length) * 100)
+                : 0
+        }
 
         return {
             type: 'session',
@@ -245,7 +280,7 @@ async function scanDirectory(dirPath: string): Promise<FolderNode> {
     for (const dir of dirs) {
         if (dir.name.startsWith('.')) continue // Skip hidden
 
-        const childNode = await scanDirectory(path.join(dirPath, dir.name))
+        const childNode = await scanDirectory(path.join(dirPath, dir.name), deepScan)
         // Only include non-empty categories or sessions
         if (childNode.type === 'session' || (childNode.children && childNode.children.length > 0)) {
             children.push(childNode)
@@ -260,8 +295,9 @@ async function scanDirectory(dirPath: string): Promise<FolderNode> {
     }
 }
 
-async function loadOrCreateMetadata(sessionPath: string, mp4Files: string[]): Promise<SessionMetadata> {
+async function loadOrCreateMetadata(sessionPath: string, mp4Files: string[], deepScan: boolean): Promise<SessionMetadata> {
     const metaPath = path.join(sessionPath, 'session.meta.json')
+    let saveNeeded = false
 
     try {
         const content = await fs.readFile(metaPath, 'utf-8')
@@ -269,14 +305,38 @@ async function loadOrCreateMetadata(sessionPath: string, mp4Files: string[]): Pr
 
         // Ensure all video files are tracked
         for (const file of mp4Files) {
+            let fileChanged = false
             if (!metadata.videos[file]) {
                 metadata.videos[file] = {
                     watchTime: 0,
                     lastPosition: 0,
                     completed: false,
-                    playCount: 0
+                    playCount: 0,
+                    duration: 0
+                }
+                fileChanged = true
+                saveNeeded = true
+            }
+
+            // Check if duration is missing (and we want to fill it)
+            // If playCount > 0 or we have watchTime, maybe we already have it? 
+            // Better to check if duration is falsy.
+            if ((fileChanged || deepScan) && !metadata.videos[file].duration) {
+                try {
+                    const filePath = path.join(sessionPath, file)
+                    const meta = await parseFile(filePath)
+                    if (meta.format.duration) {
+                        metadata.videos[file].duration = meta.format.duration
+                        saveNeeded = true
+                    }
+                } catch (e) {
+                    console.error(`Failed to parse duration for ${file}:`, e)
                 }
             }
+        }
+
+        if (deepScan && saveNeeded) {
+            await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2))
         }
 
         return metadata
@@ -301,11 +361,21 @@ async function loadOrCreateMetadata(sessionPath: string, mp4Files: string[]): Pr
 
         // Initialize video progress
         for (const file of mp4Files) {
+            let duration = 0
+            try {
+                const filePath = path.join(sessionPath, file)
+                const meta = await parseFile(filePath)
+                duration = meta.format.duration || 0
+            } catch (e) {
+                console.error(`Failed to parse duration for ${file} (init):`, e)
+            }
+
             metadata.videos[file] = {
                 watchTime: 0,
                 lastPosition: 0,
                 completed: false,
-                playCount: 0
+                playCount: 0,
+                duration
             }
         }
 

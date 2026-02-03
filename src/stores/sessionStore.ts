@@ -15,7 +15,7 @@ interface SessionStore {
     // Actions
     init: () => Promise<void>
     selectDirectory: () => Promise<void>
-    refreshTree: () => Promise<void>
+    refreshTree: (deepScan?: boolean) => Promise<void>
     selectSession: (sessionPath: string) => Promise<void>
     clearSelection: () => void
     updateSessionMetadata: (metadata: Partial<SessionMetadata>) => Promise<void>
@@ -73,13 +73,13 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     },
 
     // Refresh the folder tree
-    refreshTree: async () => {
+    refreshTree: async (deepScan: boolean = false) => {
         const { rootDirectory } = get()
         if (!rootDirectory) return
 
         set({ isLoading: true, error: null })
         try {
-            const tree = await window.api.scanDirectory(rootDirectory)
+            const tree = await window.api.scanDirectory(rootDirectory, deepScan)
             set({ folderTree: tree, isLoading: false })
         } catch (err) {
             set({ error: String(err), isLoading: false })
@@ -144,7 +144,17 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         } else {
             // 2. Auto-complete if > 95%
             const newProgress = calculateProgress(updated)
-            if (newProgress >= 95 && updated.status !== 'completed') {
+
+            // If we are undoing manual completion, we must reset status based on progress
+            if (updates.completedManually === false) {
+                if (newProgress >= 95) {
+                    updated.status = 'completed'
+                } else if (newProgress > 0) {
+                    updated.status = 'started'
+                } else {
+                    updated.status = 'untouched'
+                }
+            } else if (newProgress >= 95 && updated.status !== 'completed') {
                 updated.status = 'completed'
                 updated.completedAt = new Date().toISOString()
             }
@@ -280,10 +290,16 @@ function calculateProgress(session: SessionMetadata): number {
 
     // Try time-based calculation if duration is available for all videos
     const totalDuration = videoProgress.reduce((acc, v) => acc + (v.duration || 0), 0)
-    const totalWatchTime = videoProgress.reduce((acc, v) => acc + (v.watchTime || 0), 0)
+
+    // Calculate total effective watch time
+    // If completed, use full duration. Otherwise use max(watchTime, lastPosition)
+    const effectiveTotalWatchTime = videoProgress.reduce((acc, v) => {
+        if (v.completed && v.duration) return acc + v.duration
+        return acc + (v.watchTime || v.lastPosition || 0)
+    }, 0)
 
     if (totalDuration > 0 && videoProgress.every(v => v.duration !== undefined)) {
-        return Math.min(100, Math.round((totalWatchTime / totalDuration) * 100))
+        return Math.min(100, Math.round((effectiveTotalWatchTime / totalDuration) * 100))
     }
 
     const completedCount = videoProgress.filter(v => v.completed).length

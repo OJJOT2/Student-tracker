@@ -27,7 +27,8 @@ export function SessionCard({ session }: SessionCardProps) {
         setMode,
         setDuration,
         setBreakDuration,
-        startTimer
+        startTimer,
+        setAutoPause
     } = useFocusStore()
 
     const [isFocusSetupOpen, setIsFocusSetupOpen] = useState(false)
@@ -62,12 +63,13 @@ export function SessionCard({ session }: SessionCardProps) {
     }
 
     // Actual Logic to Start Session
-    const proceedToSession = (settings?: { enabled: boolean, focusDuration: number, breakDuration: number }) => {
+    const proceedToSession = (settings?: { enabled: boolean, focusDuration: number, breakDuration: number, autoPause: boolean }) => {
         // Configure Focus Mode if settings provided
         if (settings) {
             setMode('session')
             setDuration(settings.focusDuration)
             setBreakDuration(settings.breakDuration)
+            setAutoPause(settings.autoPause)
 
             // Handle Enable/Disable
             // If user wants it enabled and it's currently off -> toggle on

@@ -7,6 +7,7 @@ export type FocusModeType = 'external' | 'session' | 'break' | null
 interface FocusState {
     isFocusMode: boolean
     activeMode: FocusModeType
+    autoPause: boolean // Whether to pause timer when video pauses
 
     // Study Timer
     timerDuration: number // minutes
@@ -34,6 +35,7 @@ interface FocusState {
 
     // Status
     setFocusStatus: (status: FocusStatus) => void
+    setAutoPause: (enabled: boolean) => void
 
     tick: () => void // Called by interval
 }
@@ -41,6 +43,7 @@ interface FocusState {
 export const useFocusStore = create<FocusState>((set, get) => ({
     isFocusMode: false,
     activeMode: null,
+    autoPause: true, // Default enabled
 
     timerDuration: 25,
     timeLeft: 25 * 60,
@@ -87,6 +90,7 @@ export const useFocusStore = create<FocusState>((set, get) => ({
     }),
 
     setFocusStatus: (status) => set({ focusStatus: status }),
+    setAutoPause: (enabled) => set({ autoPause: enabled }),
 
     tick: () => set((state) => {
         if (state.timerState !== 'running') return {}

@@ -151,6 +151,13 @@ export function PlayerPage() {
                         Video {currentVideoIndex + 1} of {currentSession.videoFiles.length}
                     </span>
                 </div>
+                <button
+                    className="mode-switch-btn"
+                    onClick={() => navigate('/study')}
+                    title="Switch to Split Screen Mode"
+                >
+                    ◫ Split View
+                </button>
             </div>
 
             {/* Player Container */}

@@ -3,6 +3,9 @@ const electron = require("electron");
 const path = require("path");
 const fs = require("fs/promises");
 const crypto = require("crypto");
+async function parseFile(_filePath, _options = {}) {
+  throw new Error("This function require a Node engine. To load Web API File objects use parseBlob instead.");
+}
 let mainWindow = null;
 function createWindow() {
   mainWindow = new electron.BrowserWindow({
@@ -13,7 +16,9 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      webviewTag: true
+      // Enable webview for Browser Mode
     },
     titleBarStyle: "hiddenInset",
     show: false,
@@ -56,14 +61,23 @@ electron.ipcMain.handle("dir:select", async () => {
   if (result.canceled) return null;
   return result.filePaths[0];
 });
-electron.ipcMain.handle("dir:scan", async (_, dirPath) => {
-  console.log("Scanning directory:", dirPath);
+electron.ipcMain.handle("dir:scan", async (_, dirPath, deepScan = false) => {
+  console.log("Scanning directory:", dirPath, deepScan ? "(Deep Scan)" : "");
   try {
-    const result = await scanDirectory(dirPath);
-    console.log("Scan result:", JSON.stringify(result, null, 2));
+    const result = await scanDirectory(dirPath, deepScan);
+    console.log("Scan result: success");
     return result;
   } catch (err) {
     console.error("Scan error:", err);
+    throw err;
+  }
+});
+electron.ipcMain.handle("dir:create", async (_, dirPath) => {
+  try {
+    await fs.mkdir(dirPath, { recursive: true });
+    return true;
+  } catch (err) {
+    console.error("Failed to create directory:", err);
     throw err;
   }
 });
@@ -113,17 +127,33 @@ electron.ipcMain.handle("app:focus-mode", async (_, enabled) => {
   }
   return true;
 });
-async function scanDirectory(dirPath) {
+async function scanDirectory(dirPath, deepScan = false) {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
   const files = entries.filter((e) => e.isFile());
   const dirs = entries.filter((e) => e.isDirectory());
   const mp4Files = files.filter((f) => f.name.toLowerCase().endsWith(".mp4")).map((f) => f.name);
   const pdfFiles = files.filter((f) => f.name.toLowerCase().endsWith(".pdf")).map((f) => f.name);
   if (mp4Files.length > 0) {
-    const metadata = await loadOrCreateMetadata(dirPath, mp4Files);
+    const metadata = await loadOrCreateMetadata(dirPath, mp4Files, deepScan);
+    let progress = 0;
     const videoProgress = Object.values(metadata.videos);
-    const completedCount = videoProgress.filter((v) => v.completed).length;
-    const progress = mp4Files.length > 0 ? Math.round(completedCount / mp4Files.length * 100) : 0;
+    let totalTimeWatched = 0;
+    let totalDuration = 0;
+    let hasDuration = false;
+    for (const v of videoProgress) {
+      if (v.duration && v.duration > 0) {
+        hasDuration = true;
+        totalDuration += v.duration;
+        const effectiveWatch = v.completed ? v.duration : v.lastPosition || 0;
+        totalTimeWatched += effectiveWatch;
+      }
+    }
+    if (hasDuration && totalDuration > 0) {
+      progress = Math.min(100, Math.round(totalTimeWatched / totalDuration * 100));
+    } else {
+      const completedCount = videoProgress.filter((v) => v.completed).length;
+      progress = mp4Files.length > 0 ? Math.round(completedCount / mp4Files.length * 100) : 0;
+    }
     return {
       type: "session",
       path: dirPath,
@@ -145,7 +175,7 @@ async function scanDirectory(dirPath) {
   const children = [];
   for (const dir of dirs) {
     if (dir.name.startsWith(".")) continue;
-    const childNode = await scanDirectory(path.join(dirPath, dir.name));
+    const childNode = await scanDirectory(path.join(dirPath, dir.name), deepScan);
     if (childNode.type === "session" || childNode.children && childNode.children.length > 0) {
       children.push(childNode);
     }
@@ -157,20 +187,40 @@ async function scanDirectory(dirPath) {
     children
   };
 }
-async function loadOrCreateMetadata(sessionPath, mp4Files) {
+async function loadOrCreateMetadata(sessionPath, mp4Files, deepScan) {
   const metaPath = path.join(sessionPath, "session.meta.json");
+  let saveNeeded = false;
   try {
     const content = await fs.readFile(metaPath, "utf-8");
     const metadata = JSON.parse(content);
     for (const file of mp4Files) {
+      let fileChanged = false;
       if (!metadata.videos[file]) {
         metadata.videos[file] = {
           watchTime: 0,
           lastPosition: 0,
           completed: false,
-          playCount: 0
+          playCount: 0,
+          duration: 0
         };
+        fileChanged = true;
+        saveNeeded = true;
       }
+      if ((fileChanged || deepScan) && !metadata.videos[file].duration) {
+        try {
+          const filePath = path.join(sessionPath, file);
+          const meta = await parseFile(filePath);
+          if (meta.format.duration) {
+            metadata.videos[file].duration = meta.format.duration;
+            saveNeeded = true;
+          }
+        } catch (e) {
+          console.error(`Failed to parse duration for ${file}:`, e);
+        }
+      }
+    }
+    if (deepScan && saveNeeded) {
+      await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2));
     }
     return metadata;
   } catch {
@@ -191,11 +241,20 @@ async function loadOrCreateMetadata(sessionPath, mp4Files) {
       completedAt: null
     };
     for (const file of mp4Files) {
+      let duration = 0;
+      try {
+        const filePath = path.join(sessionPath, file);
+        const meta = await parseFile(filePath);
+        duration = meta.format.duration || 0;
+      } catch (e) {
+        console.error(`Failed to parse duration for ${file} (init):`, e);
+      }
       metadata.videos[file] = {
         watchTime: 0,
         lastPosition: 0,
         completed: false,
-        playCount: 0
+        playCount: 0,
+        duration
       };
     }
     await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2));

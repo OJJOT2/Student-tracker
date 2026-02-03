@@ -46,6 +46,14 @@ export function TabBar() {
                 </NavLink>
 
                 <NavLink
+                    to="/notes"
+                    className={({ isActive }) => `tab-item ${isActive ? 'active' : ''}`}
+                >
+                    <span className="tab-icon">📝</span>
+                    <span className="tab-label">Notes</span>
+                </NavLink>
+
+                <NavLink
                     to="/calendar"
                     className={({ isActive }) => `tab-item ${isActive ? 'active' : ''}`}
                 >

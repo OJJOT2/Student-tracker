@@ -32,6 +32,7 @@ interface PDFToolbarProps {
     onRedo: () => void
     onSave: () => void
     onInsertImage?: (file: File) => void
+    onAddPage?: (page: number) => void
 }
 
 const COLORS = ['#000000', '#ff0000', '#0000ff', '#00aa00', '#ff6600', '#9900ff']
@@ -78,7 +79,8 @@ export function PDFToolbar({
     onUndo,
     onRedo,
     onSave,
-    onInsertImage
+    onInsertImage,
+    onAddPage
 }: PDFToolbarProps) {
     const [showToolOptions, setShowToolOptions] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -314,10 +316,18 @@ export function PDFToolbar({
                 )}
 
                 <button
-                    className="toolbar-btn-sm save-btn-sm"
+                    className="toolbar-btn-sm"
                     onClick={onSave}
                     title="Save (Ctrl+S)"
                 >💾</button>
+
+                {onAddPage && (
+                    <button
+                        className="toolbar-btn-sm"
+                        onClick={() => onAddPage(currentPage)}
+                        title="Add Page (After current)"
+                    >📄+</button>
+                )}
             </div>
         </div>
     )

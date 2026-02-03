@@ -373,7 +373,8 @@ export function VideoPlayer({
         breakTimeLeft,
         setFocusStatus,
         toggleFocusMode,
-        setMode
+        setMode,
+        autoPause
     } = useFocusStore()
 
     // Video event handlers
@@ -404,6 +405,12 @@ export function VideoPlayer({
                 }
                 setFocusStatus('break')
             }
+
+            // If auto-pause is enabled, switch to break on pause
+            if (isFocusMode && activeMode === 'session' && autoPause) {
+                setFocusStatus('break')
+            }
+
 
             setIsPlaying(false)
             setShowControls(true)

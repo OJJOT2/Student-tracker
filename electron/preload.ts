@@ -50,8 +50,11 @@ const api = {
     selectDirectory: (): Promise<string | null> =>
         ipcRenderer.invoke('dir:select'),
 
-    scanDirectory: (path: string): Promise<FolderNode> =>
-        ipcRenderer.invoke('dir:scan', path),
+    scanDirectory: (path: string, deepScan?: boolean): Promise<FolderNode> =>
+        ipcRenderer.invoke('dir:scan', path, deepScan),
+
+    createDirectory: (path: string): Promise<boolean> =>
+        ipcRenderer.invoke('dir:create', path),
 
     // Session metadata
     loadSessionMetadata: (sessionPath: string): Promise<SessionMetadata | null> =>

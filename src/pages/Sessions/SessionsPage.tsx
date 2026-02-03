@@ -14,6 +14,7 @@ export function SessionsPage() {
     } = useSessionStore()
 
     const [filter, setFilter] = useState<'all' | 'completed' | 'in-progress' | 'untouched'>('all')
+    const [showRefreshMenu, setShowRefreshMenu] = useState(false)
 
     // This requires FilterableFolderTree or logic to filter tree
     // FolderTree component currently renders from store directly.
@@ -65,9 +66,37 @@ export function SessionsPage() {
                         📂 {folderTree ? 'Change Folder' : 'Select Folder'}
                     </button>
                     {folderTree && (
-                        <button className="btn btn-secondary" onClick={refreshTree}>
-                            🔄 Refresh
-                        </button>
+                        <div className="refresh-split-btn">
+                            <button
+                                className="btn btn-secondary main-refresh"
+                                onClick={() => refreshTree(false)}
+                                title="Quick Refresh"
+                            >
+                                🔄 Refresh
+                            </button>
+                            <button
+                                className="btn btn-secondary refresh-dropdown-trigger"
+                                onClick={() => setShowRefreshMenu(!showRefreshMenu)}
+                            >
+                                ▼
+                            </button>
+                            {showRefreshMenu && (
+                                <div className="refresh-menu">
+                                    <button onClick={() => {
+                                        refreshTree(false)
+                                        setShowRefreshMenu(false)
+                                    }}>
+                                        ⚡ Quick Refresh
+                                    </button>
+                                    <button onClick={() => {
+                                        refreshTree(true)
+                                        setShowRefreshMenu(false)
+                                    }}>
+                                        🛡️ Complete Refresh
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
             </aside>

@@ -52,21 +52,94 @@ export function AnnotationLayer({
         // Apply scale for drawing (so 1 unit = 1 page unit)
         ctx.scale(scale, scale)
 
-        // Draw all saved strokes with smooth rendering
-        strokes.forEach(stroke => {
+        // Separate highlighter strokes from other strokes
+        const highlighterStrokes = strokes.filter(s => s.tool === 'highlighter')
+        const otherStrokes = strokes.filter(s => s.tool !== 'highlighter')
+
+        // Draw highlighters to an off-screen canvas first to prevent intensity stacking
+        if (highlighterStrokes.length > 0) {
+            const offscreenCanvas = document.createElement('canvas')
+            offscreenCanvas.width = canvas.width
+            offscreenCanvas.height = canvas.height
+            const offCtx = offscreenCanvas.getContext('2d')
+
+            if (offCtx) {
+                offCtx.scale(scale, scale)
+
+                // Draw all highlighter strokes at FULL opacity on the off-screen canvas
+                // Using 'max' composite operation to prevent overlapping areas from intensifying
+                highlighterStrokes.forEach((stroke, index) => {
+                    if (stroke.points.length < 2) return
+
+                    offCtx.save()
+                    offCtx.lineCap = 'round'
+                    offCtx.lineJoin = 'round'
+                    offCtx.strokeStyle = stroke.color
+                    offCtx.globalAlpha = 1.0
+                    // Use 'lighter' for first stroke, then 'darken' to prevent stacking
+                    if (index === 0) {
+                        offCtx.globalCompositeOperation = 'source-over'
+                    } else {
+                        // 'darken' keeps the darker color, preventing lightening from overlaps
+                        offCtx.globalCompositeOperation = 'darken'
+                    }
+
+                    // Draw the stroke path
+                    for (let i = 0; i < stroke.points.length - 1; i++) {
+                        const p0 = stroke.points[Math.max(0, i - 1)]
+                        const p1 = stroke.points[i]
+                        const p2 = stroke.points[i + 1]
+                        const p3 = stroke.points[Math.min(stroke.points.length - 1, i + 2)]
+
+                        const segmentPressure = (p1.pressure + p2.pressure) / 2
+                        offCtx.lineWidth = stroke.size * segmentPressure * 2
+
+                        const t = 1.0
+                        const cp1 = {
+                            x: p1.x + (p2.x - p0.x) / 6 * t,
+                            y: p1.y + (p2.y - p0.y) / 6 * t
+                        }
+                        const cp2 = {
+                            x: p2.x - (p3.x - p1.x) / 6 * t,
+                            y: p2.y - (p3.y - p1.y) / 6 * t
+                        }
+
+                        offCtx.beginPath()
+                        offCtx.moveTo(p1.x, p1.y)
+                        offCtx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y)
+                        offCtx.stroke()
+                    }
+                    offCtx.restore()
+                })
+
+                // Now composite the entire highlighter layer onto main canvas with desired alpha
+                ctx.save()
+                ctx.setTransform(1, 0, 0, 1, 0, 0) // Reset transform for compositing
+                ctx.globalAlpha = 0.3
+                ctx.globalCompositeOperation = 'multiply'
+                ctx.drawImage(offscreenCanvas, 0, 0)
+                ctx.restore()
+
+                // Re-apply scale for remaining strokes
+                ctx.scale(scale, scale)
+            }
+        }
+
+        // Draw all other saved strokes with smooth rendering
+        otherStrokes.forEach(stroke => {
             if (stroke.points.length < 2) return
 
             if (stroke.tool === 'whiteout') {
                 // White-out strokes
                 drawWhiteOut(ctx, stroke.points, stroke.size)
             } else {
-                // Pen and highlighter strokes
+                // Pen strokes
                 drawSmoothStroke(
                     ctx,
                     stroke.points,
                     stroke.size,
                     stroke.color,
-                    stroke.tool === 'highlighter'
+                    false // not highlighter
                 )
             }
         })

@@ -73,7 +73,14 @@ export function PDFPage() {
 
         // Save to file
         try {
-            console.log('Saving PDF...')
+            console.log('=== Saving PDF ===')
+            console.log('PDF File:', currentPDFFile)
+            console.log('Session Path:', currentSession.path)
+            console.log('Annotations pages:', Object.keys(pageAnnotations))
+            console.log('Total strokes per page:', Object.entries(pageAnnotations).map(([page, strokes]) => `Page ${page}: ${strokes.length} strokes`))
+            console.log('Images pages:', Object.keys(pageImages))
+            console.log('Viewport width:', viewportWidth)
+
             const modifiedPdfBytes = await saveAnnotationsToPDF(pdfData, pageAnnotations, pageImages, viewportWidth)
 
             // Convert to ArrayBuffer

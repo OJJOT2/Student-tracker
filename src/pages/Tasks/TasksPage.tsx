@@ -1,9 +1,13 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useSessionStore } from '../../stores/sessionStore'
 import { useTaskStore, TaskStatus, Task } from '../../stores/taskStore'
 import './TasksPage.css'
 
 export function TasksPage() {
     const { tasks, addTask, moveTask, deleteTask } = useTaskStore()
+    const { selectSession } = useSessionStore()
+    const navigate = useNavigate()
     const [newTaskTitle, setNewTaskTitle] = useState('')
     const [isAdding, setIsAdding] = useState(false)
 
@@ -14,6 +18,11 @@ export function TasksPage() {
             setNewTaskTitle('')
             setIsAdding(false)
         }
+    }
+
+    const handleSessionClick = async (path: string) => {
+        await selectSession(path)
+        navigate(`/sessions`) // Navigate to sessions page where session details are shown
     }
 
     const onDragStart = (e: React.DragEvent, taskId: string) => {
@@ -50,7 +59,19 @@ export function TasksPage() {
                         onDragStart={(e) => onDragStart(e, task.id)}
                     >
                         <div className="task-content">
-                            {task.title}
+                            <div className="task-title">{task.title}</div>
+                            {task.sessionPath && (
+                                <button
+                                    className="link-btn"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        handleSessionClick(task.sessionPath!)
+                                    }}
+                                >
+                                    🔗 Go to Session
+                                </button>
+                            )}
                         </div>
                         <button
                             className="delete-task-btn"

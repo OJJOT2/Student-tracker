@@ -11,6 +11,7 @@ import { PlayerPage } from './pages/Player/PlayerPage'
 import { PDFPage } from './pages/PDF/PDFPage'
 import { SplitScreenLayout } from './components/SplitScreen/SplitScreenLayout'
 import { TabBar } from './components/TabBar/TabBar'
+import { NotesDashboard } from './pages/Notes/NotesDashboard'
 import { useSessionStore } from './stores/sessionStore'
 
 // import { FocusTimer } from './components/FocusMode/FocusTimer'
@@ -45,6 +46,7 @@ function App() {
                                 <Route path="/goals" element={<GoalsPage />} />
                                 <Route path="/calendar" element={<CalendarPage />} />
                                 <Route path="/settings" element={<SettingsPage />} />
+                                <Route path="/notes" element={<NotesDashboard />} />
                                 <Route path="/dashboard" element={<DashboardPage />} />
                             </Routes>
                         </main>

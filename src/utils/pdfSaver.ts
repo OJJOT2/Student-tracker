@@ -149,3 +149,27 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
         b: (num & 255) / 255
     }
 }
+
+/**
+ * Adds an empty page to the PDF.
+ * @param pdfData Original PDF data
+ * @param afterPageIndex Index of the page to insert after (0-based)
+ * @returns Modified PDF data
+ */
+export async function addPageToPDF(pdfData: ArrayBuffer, afterPageIndex: number): Promise<Uint8Array> {
+    const pdfDoc = await PDFDocument.load(pdfData)
+
+    // Get dimensions of the previous page (or first page if index -1)
+    const pages = pdfDoc.getPages()
+    const refPage = pages[Math.max(0, Math.min(afterPageIndex, pages.length - 1))]
+    const { width, height } = refPage.getSize()
+
+    // Insert page
+    // insertPage index is 0-based position.
+    // If afterPageIndex is 0 (Page 1), we want to insert at index 1.
+    const insertIndex = afterPageIndex + 1
+
+    pdfDoc.insertPage(insertIndex, [width, height])
+
+    return await pdfDoc.save()
+}

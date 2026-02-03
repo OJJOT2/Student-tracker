@@ -3,7 +3,8 @@ const electron = require("electron");
 const api = {
   // Directory operations
   selectDirectory: () => electron.ipcRenderer.invoke("dir:select"),
-  scanDirectory: (path) => electron.ipcRenderer.invoke("dir:scan", path),
+  scanDirectory: (path, deepScan) => electron.ipcRenderer.invoke("dir:scan", path, deepScan),
+  createDirectory: (path) => electron.ipcRenderer.invoke("dir:create", path),
   // Session metadata
   loadSessionMetadata: (sessionPath) => electron.ipcRenderer.invoke("session:read", sessionPath),
   saveSessionMetadata: (sessionPath, metadata) => electron.ipcRenderer.invoke("session:write", sessionPath, metadata),
