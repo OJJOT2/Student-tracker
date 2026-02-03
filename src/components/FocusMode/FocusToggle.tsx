@@ -2,7 +2,9 @@ import { useFocusStore } from '../../stores/focusStore'
 import './FocusMode.css'
 
 export function FocusToggle() {
-    const { isFocusMode, toggleFocusMode } = useFocusStore()
+    const { isFocusMode, toggleFocusMode, strictMode } = useFocusStore()
+
+    if (isFocusMode && strictMode) return null
 
     return (
         <button

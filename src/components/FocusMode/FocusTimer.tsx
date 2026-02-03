@@ -11,11 +11,13 @@ export function FocusTimer() {
         focusStatus,
         activeMode,
         isFocusMode,
+        strictMode,
         toggleFocusMode,
         startTimer,
         pauseTimer,
         timerState,
-        tick // Import tick action
+        tick, // Import tick action
+        playbackSpeed
     } = useFocusStore()
 
     const [isMinimized, setIsMinimized] = useState(false)
@@ -42,6 +44,17 @@ export function FocusTimer() {
             if (interval) clearInterval(interval)
         }
     }, [timerState, tick])
+
+    // Strict Mode Logic
+    useEffect(() => {
+        const shouldBeStrict = isFocusMode && activeMode === 'session' && strictMode && focusStatus === 'study'
+        window.api.setFocusMode(shouldBeStrict)
+
+        return () => {
+            // Ensure we turn off strict mode if unmounting (though App main usually persists)
+            if (shouldBeStrict) window.api.setFocusMode(false)
+        }
+    }, [isFocusMode, activeMode, strictMode, focusStatus])
 
     // Resize Handlers
     // Resize Handlers
@@ -237,7 +250,9 @@ export function FocusTimer() {
                         <div className="mini-time-val" style={{ fontSize: `${Math.max(24, size * 0.22)}px` }}>
                             {focusStatus === 'study' ? Math.ceil(timeLeft / 60) : Math.ceil(breakTimeLeft / 60)}
                         </div>
-                        <div className="mini-time-label" style={{ fontSize: `${Math.max(10, size * 0.06)}px` }}>min</div>
+                        <div className="mini-time-label" style={{ fontSize: `${Math.max(10, size * 0.06)}px` }}>
+                            min {playbackSpeed > 1 && focusStatus === 'study' ? `(${playbackSpeed}x)` : ''}
+                        </div>
                         <div className={`mini-status ${focusStatus}`} style={{ fontSize: `${Math.max(8, size * 0.05)}px` }}>
                             {focusStatus === 'study' ? 'FOCUS' : 'BREAK'}
                             {timerState === 'paused' && ' (PAUSED)'}
@@ -262,7 +277,7 @@ export function FocusTimer() {
                             📐
                         </button>
                         <button className="icon-smt" onClick={() => setIsMinimized(true)} title="Minimize">_</button>
-                        {timerState === 'running' ? (
+                        {strictMode && timerState === 'running' ? null : timerState === 'running' ? (
                             <button className="icon-smt" onClick={pauseTimer} title="Pause">⏸</button>
                         ) : (
                             <button className="icon-smt" onClick={startTimer} title="Resume">▶</button>

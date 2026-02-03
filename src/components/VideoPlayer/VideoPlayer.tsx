@@ -92,6 +92,20 @@ export function VideoPlayer({
         return `${m}:${s.toString().padStart(2, '0')}`
     }
 
+    // Focus Mode Integration (Moved to top for scope access)
+    const {
+        isFocusMode,
+        activeMode,
+        focusStatus,
+        breakTimeLeft,
+        setFocusStatus,
+        toggleFocusMode,
+        setMode,
+        autoPause,
+        strictMode,
+        setPlaybackSpeed // New action
+    } = useFocusStore()
+
     // Play/Pause toggle
     const togglePlay = useCallback(() => {
         const video = videoRef.current
@@ -155,6 +169,8 @@ export function VideoPlayer({
             const roundedRate = Math.round(rate * 10) / 10 // Round to 1 decimal
             videoRef.current.playbackRate = roundedRate
             setPlaybackRate(roundedRate)
+            setPlaybackSpeed(roundedRate) // Update focus store
+
             // Show speed indicator
             setShowSpeedIndicator(true)
             if (speedIndicatorTimeout.current) {
@@ -164,18 +180,29 @@ export function VideoPlayer({
                 setShowSpeedIndicator(false)
             }, 1500)
         }
-    }, [])
+    }, [setPlaybackSpeed])
 
     // Toggle fullscreen
-    const toggleFullscreen = useCallback(() => {
+    const toggleFullscreen = useCallback(async () => {
         if (!containerRef.current) return
 
-        if (!document.fullscreenElement) {
-            containerRef.current.requestFullscreen()
-        } else {
-            document.exitFullscreen()
+        try {
+            if (!document.fullscreenElement) {
+                await containerRef.current.requestFullscreen()
+            } else {
+                await document.exitFullscreen()
+                // If in strict mode, ensure the window stays fullscreen
+                if (isFocusMode && strictMode && activeMode === 'session' && focusStatus === 'study') {
+                    // Small delay to let the exitFullscreen generic behavior finish, then force window fullscreen
+                    setTimeout(() => {
+                        window.api.setFocusMode(true)
+                    }, 50)
+                }
+            }
+        } catch (err) {
+            console.error("Fullscreen toggle error:", err)
         }
-    }, [])
+    }, [isFocusMode, strictMode, activeMode, focusStatus])
 
     // Show controls temporarily
     const showControlsTemporarily = useCallback(() => {
@@ -365,17 +392,8 @@ export function VideoPlayer({
         return () => document.removeEventListener('keydown', handleKeyDown)
     }, [togglePlay, skip, toggleMute, toggleFullscreen, handleAddMark, moveFrame, zoomFrame, resetTransform, playbackRate, changePlaybackRate])
 
-    // Focus Mode Integration
-    const {
-        isFocusMode,
-        activeMode,
-        focusStatus,
-        breakTimeLeft,
-        setFocusStatus,
-        toggleFocusMode,
-        setMode,
-        autoPause
-    } = useFocusStore()
+    // Focus Mode Integration (Moved up)
+    // const { ... } = useFocusStore()
 
     // Video event handlers
     useEffect(() => {
@@ -667,21 +685,23 @@ export function VideoPlayer({
 
                         <div className="separator" style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)', margin: '0 4px' }}></div>
 
-                        <button
-                            className={`control-btn ${isFocusMode && activeMode === 'session' ? 'active-focus' : ''}`}
-                            onClick={() => {
-                                if (isFocusMode && activeMode === 'session') {
-                                    toggleFocusMode()
-                                } else {
-                                    setMode('session')
-                                    if (!isFocusMode) toggleFocusMode()
-                                }
-                            }}
-                            title={isFocusMode ? "Disable Focus Mode" : "Enable Focus Mode"}
-                            style={{ color: isFocusMode && activeMode === 'session' ? '#4a90e2' : 'white' }}
-                        >
-                            {isFocusMode && activeMode === 'session' ? '🧠 ON' : '🧠'}
-                        </button>
+                        {(!isFocusMode || !strictMode) && (
+                            <button
+                                className={`control-btn ${isFocusMode && activeMode === 'session' ? 'active-focus' : ''}`}
+                                onClick={() => {
+                                    if (isFocusMode && activeMode === 'session') {
+                                        toggleFocusMode()
+                                    } else {
+                                        setMode('session')
+                                        if (!isFocusMode) toggleFocusMode()
+                                    }
+                                }}
+                                title={isFocusMode ? "Disable Focus Mode" : "Enable Focus Mode"}
+                                style={{ color: isFocusMode && activeMode === 'session' ? '#4a90e2' : 'white' }}
+                            >
+                                {isFocusMode && activeMode === 'session' ? '🧠 ON' : '🧠'}
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

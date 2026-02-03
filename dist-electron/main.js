@@ -116,12 +116,21 @@ electron.ipcMain.handle("file:write", async (_, filePath, data) => {
     throw err;
   }
 });
+const enforceFocus = () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setAlwaysOnTop(true, "screen-saver");
+    mainWindow.focus();
+  }
+};
 electron.ipcMain.handle("app:focus-mode", async (_, enabled) => {
   if (!mainWindow) return;
   if (enabled) {
     mainWindow.setFullScreen(true);
     mainWindow.setAlwaysOnTop(true, "screen-saver");
+    mainWindow.on("blur", enforceFocus);
+    mainWindow.focus();
   } else {
+    mainWindow.removeListener("blur", enforceFocus);
     mainWindow.setAlwaysOnTop(false);
     mainWindow.setFullScreen(false);
   }

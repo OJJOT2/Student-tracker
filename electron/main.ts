@@ -193,16 +193,26 @@ ipcMain.handle('file:write', async (_, filePath: string, data: ArrayBuffer) => {
 })
 
 // Toggle Focus Mode (Always on Top / Kiosk)
+const enforceFocus = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.setAlwaysOnTop(true, 'screen-saver')
+        mainWindow.focus()
+    }
+}
+
 ipcMain.handle('app:focus-mode', async (_, enabled: boolean) => {
     if (!mainWindow) return
 
-    // On Windows, setFullScreen alone might suffice for kiosk-like feel
-    // But setAlwaysOnTop ensures it stays there
-
     if (enabled) {
         mainWindow.setFullScreen(true)
-        mainWindow.setAlwaysOnTop(true, 'screen-saver') // 'screen-saver' level is very high
+        mainWindow.setAlwaysOnTop(true, 'screen-saver')
+        // Aggressive focus enforcement
+        mainWindow.on('blur', enforceFocus)
+        // Also ensure it grabs focus immediately
+        mainWindow.focus()
+
     } else {
+        mainWindow.removeListener('blur', enforceFocus)
         mainWindow.setAlwaysOnTop(false)
         mainWindow.setFullScreen(false)
     }

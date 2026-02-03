@@ -8,6 +8,9 @@ interface FocusState {
     isFocusMode: boolean
     activeMode: FocusModeType
     autoPause: boolean // Whether to pause timer when video pauses
+    strictMode: boolean
+    playbackSpeed: number
+    setPlaybackSpeed: (speed: number) => void
 
     // Study Timer
     timerDuration: number // minutes
@@ -36,6 +39,7 @@ interface FocusState {
     // Status
     setFocusStatus: (status: FocusStatus) => void
     setAutoPause: (enabled: boolean) => void
+    setStrictMode: (enabled: boolean) => void
 
     tick: () => void // Called by interval
 }
@@ -44,6 +48,7 @@ export const useFocusStore = create<FocusState>((set, get) => ({
     isFocusMode: false,
     activeMode: null,
     autoPause: true, // Default enabled
+    strictMode: false,
 
     timerDuration: 25,
     timeLeft: 25 * 60,
@@ -59,7 +64,8 @@ export const useFocusStore = create<FocusState>((set, get) => ({
         // When turning off, reset specific session flags if needed
         return {
             isFocusMode: nextState,
-            timerState: nextState ? state.timerState : 'idle'
+            timerState: nextState ? state.timerState : 'idle',
+            strictMode: nextState ? state.strictMode : false // Disable strict mode if focus mode is disabled
         }
     }),
 
@@ -91,6 +97,10 @@ export const useFocusStore = create<FocusState>((set, get) => ({
 
     setFocusStatus: (status) => set({ focusStatus: status }),
     setAutoPause: (enabled) => set({ autoPause: enabled }),
+    setStrictMode: (enabled) => set({ strictMode: enabled }),
+
+    playbackSpeed: 1,
+    setPlaybackSpeed: (speed) => set({ playbackSpeed: speed }),
 
     tick: () => set((state) => {
         if (state.timerState !== 'running') return {}
@@ -101,17 +111,31 @@ export const useFocusStore = create<FocusState>((set, get) => ({
         if (state.focusStatus === 'study') {
             if (state.timeLeft <= 0) {
                 // Study timer finished
-                // If auto-switch is desired, could go to break, but for now just stop or stay at 0
                 return { timeLeft: 0 }
             }
-            return { timeLeft: state.timeLeft - 1 }
+            // If synced speed is desired, we multiply the decrement.
+            // Use the playbackSpeed for study time decrement.
+            // "add a mark in the clock showing that the focus time also runs 2x" -> implies it runs faster.
+            // We assume this is always active if the store has the speed (only set by VideoPlayer).
+            // Break time (else block) should NOT start running faster ("but this is not applied to breaks too").
+
+            // We need to decide if we rely on a flag or just always do it if speed != 1.
+            // User request #3: "speed like 2x ... focus time also runs 2x".
+            // It seems safe to do this generally for the study timer in session mode.
+            const decrement = state.activeMode === 'session' ? state.playbackSpeed : 1
+
+            // Decrease by 'decrement'. Note that tick calls are 1 per second. 
+            // So we just subtract 'decrement' from timeLeft.
+            // Float precision might be an issue so maybe store as float or just handle it. 
+            // timeLeft is number (seconds). 
+            return { timeLeft: Math.max(0, state.timeLeft - decrement) }
         } else {
-            // Break status
+            // Break status - Always real time (1x)
             if (state.breakTimeLeft <= 0) {
                 // Break finished
                 return { breakTimeLeft: 0 }
             }
-            return { breakTimeLeft: state.breakTimeLeft - 1 }
+            return { breakTimeLeft: Math.max(0, state.breakTimeLeft - 1) }
         }
     })
 }))

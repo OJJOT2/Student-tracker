@@ -207,7 +207,7 @@ export function SplitScreenLayout() {
                 </div>
                 <div className="header-control-group">
                     <FocusToggle />
-                    <Timer />
+                    {/* <Timer /> - Removed to avoid double clocks since VideoPlayer has one */}
                 </div>
                 <div className="header-right">
                     <button

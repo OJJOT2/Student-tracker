@@ -63,13 +63,14 @@ export function SessionCard({ session }: SessionCardProps) {
     }
 
     // Actual Logic to Start Session
-    const proceedToSession = (settings?: { enabled: boolean, focusDuration: number, breakDuration: number, autoPause: boolean }) => {
+    const proceedToSession = (settings?: { enabled: boolean, focusDuration: number, breakDuration: number, autoPause: boolean, strictMode: boolean }) => {
         // Configure Focus Mode if settings provided
         if (settings) {
             setMode('session')
             setDuration(settings.focusDuration)
             setBreakDuration(settings.breakDuration)
             setAutoPause(settings.autoPause)
+            useFocusStore.getState().setStrictMode(settings.strictMode)
 
             // Handle Enable/Disable
             // If user wants it enabled and it's currently off -> toggle on
@@ -304,6 +305,7 @@ export function SessionCard({ session }: SessionCardProps) {
                 isOpen={isFocusSetupOpen}
                 onClose={() => setIsFocusSetupOpen(false)}
                 onConfirm={proceedToSession}
+                session={session}
             />
 
             {/* Edit Modal */}
